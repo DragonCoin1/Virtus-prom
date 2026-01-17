@@ -33,8 +33,6 @@
 
                 <a class="vp-nav-link {{ request()->routeIs('module.promoters') ? 'active' : '' }}" href="{{ route('module.promoters') }}">Промоутеры</a>
 
-                <a class="vp-nav-link {{ request()->routeIs('routes.*') ? 'active' : '' }}" href="{{ route('routes.index') }}">Маршруты</a>
-
                 <a class="vp-nav-link {{ request()->routeIs('module.route_actions') || request()->routeIs('route_actions.*') ? 'active' : '' }}"
                    href="{{ route('module.route_actions') }}">Разноска</a>
 

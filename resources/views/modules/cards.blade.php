@@ -3,104 +3,99 @@
 
 @section('content')
 @php
-    use Carbon\Carbon;
-
-    $now = Carbon::now();
-    $limitDays = 7;
-
     $typeMap = [
         'city' => 'Город',
         'private' => 'Частный сектор',
         'mixed' => 'Смешанный',
     ];
-
-    $fmtAge = function (?Carbon $last, Carbon $now) {
-        if (!$last) return '—';
-
-        $hours = $last->diffInHours($now);
-        if ($hours < 48) {
-            return (int)$hours . ' ч';
-        }
-
-        $days = $last->diffInDays($now);
-        if ($days < 60) {
-            return (int)$days . ' д';
-        }
-
-        $months = $last->diffInMonths($now);
-        if ($months < 24) {
-            return (int)$months . ' мес';
-        }
-
-        $years = $last->diffInYears($now);
-        return (int)$years . ' г';
-    };
 @endphp
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="m-0">Карты</h3>
-
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h3 class="mb-0">Карты</h3>
     <div class="d-flex gap-2">
+        <a href="{{ route('routes.create') }}" class="btn btn-sm btn-outline-primary">+ Маршрут</a>
+        <a href="{{ route('routes.import.form') }}" class="btn btn-sm btn-primary">Импорт</a>
         <a class="btn btn-outline-primary btn-sm" href="{{ route('ad_templates.index') }}">Макеты</a>
     </div>
 </div>
 
+@if(session('ok'))
+    <div class="alert alert-success">{{ session('ok') }}</div>
+@endif
+
 <div class="card">
-    <div class="card-body py-2">
-        <div class="text-muted">
-            Статус: <span class="vp-dot vp-dot-green"></span> менее или равно {{ $limitDays }} дней,
-            <span class="vp-dot vp-dot-purple"></span> более {{ $limitDays }} дней / нет прохождений
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th style="width: 48px;"></th>
+                    <th>Код</th>
+                    <th>Район</th>
+                    <th>Тип</th>
+                    <th class="text-end">Ящики</th>
+                    <th class="text-end">Подъезды</th>
+                    <th>Последнее прохождение</th>
+                    <th>Давность</th>
+                    <th class="text-end" style="width: 140px;">Действия</th>
+                </tr>
+                </thead>
+                <tbody>
+                @forelse($routes as $r)
+                    @php
+                        $typeText = $typeMap[$r->route_type] ?? $r->route_type ?? '—';
+                    @endphp
+                    <tr>
+                        <td class="text-center">
+                            <span class="vp-dot {{ $r->is_stale ? 'vp-dot-purple' : 'vp-dot-green' }}"></span>
+                        </td>
+                        <td class="fw-semibold">{{ $r->route_code }}</td>
+                        <td class="text-muted">{{ $r->route_district ?? '—' }}</td>
+                        <td class="text-muted">{{ $typeText }}</td>
+                        <td class="text-end">{{ (int) $r->boxes_count }}</td>
+                        <td class="text-end">{{ (int) $r->entrances_count }}</td>
+                        <td>
+                            @if($r->last_action_date_parsed)
+                                {{ $r->last_action_date_parsed->format('d.m.Y') }}
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
+                        </td>
+                        <td class="text-muted">{{ $r->age_label }}</td>
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                    Действия
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('routes.edit', $r->route_id) }}">
+                                            Редактировать
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('module.route_actions', ['route_id' => $r->route_id]) }}">
+                                            Разноска по маршруту
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-4">Маршрутов нет</td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead class="sticky-top" style="background:#fff;">
-            <tr>
-                <th style="width: 56px;">Статус</th>
-                <th style="width: 120px;">Код</th>
-                <th>Район</th>
-                <th style="width: 140px;">Тип</th>
-                <th style="width: 160px;">Последнее прохождение</th>
-                <th style="width: 120px;">Давность</th>
-            </tr>
-            </thead>
-            <tbody>
-            @foreach($routes as $r)
-                @php
-                    $last = $r->last_action_date ? Carbon::parse($r->last_action_date) : null;
-                    $days = $last ? $last->diffInDays($now) : null;
-
-                    $isPurple = !$last || $days > $limitDays;
-
-                    // район — если у тебя колонка называется иначе, просто поменяешь тут ключ
-                    $area = $r->route_area ?? $r->route_district ?? $r->route_region ?? '—';
-
-                    $rawType = $r->route_type ?? null;
-                    $typeText = $rawType !== null ? ($typeMap[$rawType] ?? $rawType) : '—';
-                @endphp
-
-                <tr>
-                    <td><span class="vp-dot {{ $isPurple ? 'vp-dot-purple' : 'vp-dot-green' }}"></span></td>
-                    <td class="fw-semibold">{{ $r->route_code ?? ('ID ' . ($r->route_id ?? '')) }}</td>
-                    <td>{{ $area }}</td>
-                    <td>{{ $typeText }}</td>
-                    <td>{{ $last ? $last->format('Y-m-d') : '—' }}</td>
-                    <td>{{ $fmtAge($last, $now) }}</td>
-                </tr>
-            @endforeach
-
-            @if($routes->count() === 0)
-                <tr>
-                    <td colspan="6" class="text-center text-muted p-4">Нет маршрутов</td>
-                </tr>
-            @endif
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<div class="mt-3">
-    {{ $routes->links() }}
+    @if($routes->hasPages())
+        <div class="card-footer">
+            {{ $routes->links() }}
+        </div>
+    @endif
 </div>
 @endsection
