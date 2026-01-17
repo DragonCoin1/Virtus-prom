@@ -15,7 +15,7 @@ class UsersSeeder extends Seeder
         $ownerHash = Hash::make('owner12345');
         $managerHash = Hash::make('manager12345');
 
-        DB::table('users')->insert([
+        $users = [
             [
                 'role_id' => $roles['owner'],
                 'user_login' => 'owner',
@@ -32,6 +32,13 @@ class UsersSeeder extends Seeder
                 'user_full_name' => 'Manager User',
                 'user_is_active' => 1,
             ],
-        ]);
+        ];
+
+        foreach ($users as $user) {
+            DB::table('users')->updateOrInsert(
+                ['user_login' => $user['user_login']],
+                $user
+            );
+        }
     }
 }

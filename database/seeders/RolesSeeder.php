@@ -9,10 +9,11 @@ class RolesSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('roles')->insert([
-            ['role_name' => 'owner'],
-            ['role_name' => 'manager'],
-            ['role_name' => 'promoter'],
-        ]);
+        foreach (['owner', 'manager', 'promoter'] as $roleName) {
+            DB::table('roles')->updateOrInsert(
+                ['role_name' => $roleName],
+                ['role_name' => $roleName]
+            );
+        }
     }
 }
