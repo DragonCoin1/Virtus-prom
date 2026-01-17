@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Interview extends Model
 {
@@ -11,7 +12,6 @@ class Interview extends Model
 
     protected $fillable = [
         'interview_date',
-        'interview_time',
         'candidate_name',
         'candidate_phone',
         'source',
@@ -22,8 +22,17 @@ class Interview extends Model
 
     protected $casts = [
         'interview_date' => 'date',
-        'interview_time' => 'string',
     ];
+
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+
+        if (Schema::hasColumn($this->getTable(), 'interview_time')) {
+            $this->fillable[] = 'interview_time';
+            $this->casts['interview_time'] = 'string';
+        }
+    }
 
     public function createdBy()
     {
