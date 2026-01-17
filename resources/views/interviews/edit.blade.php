@@ -20,6 +20,12 @@
                        value="{{ old('interview_date', $interview->interview_date) }}" required>
             </div>
 
+            <div class="col-md-2">
+                <label class="form-label">Время</label>
+                <input class="form-control" type="time" name="interview_time"
+                       value="{{ old('interview_time', $interview->interview_time ? substr($interview->interview_time, 0, 5) : '') }}">
+            </div>
+
             <div class="col-md-5">
                 <label class="form-label">Кандидат (ФИО)</label>
                 <input class="form-control" name="candidate_name"

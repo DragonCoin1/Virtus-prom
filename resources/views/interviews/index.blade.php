@@ -9,11 +9,11 @@
     $dateTo = request('date_to');
 
     $statusMap = [
-        'planned' => ['label' => 'Запланировано', 'badge' => 'text-bg-primary'],
-        'came' => ['label' => 'Пришёл', 'badge' => 'text-bg-success'],
-        'no_show' => ['label' => 'Не пришёл', 'badge' => 'text-bg-secondary'],
-        'hired' => ['label' => 'Принят', 'badge' => 'text-bg-success'],
-        'rejected' => ['label' => 'Отказ', 'badge' => 'text-bg-danger'],
+        'planned' => ['label' => 'Запланировано', 'badge' => 'bg-primary-subtle text-primary-emphasis border border-primary-subtle'],
+        'came' => ['label' => 'Пришёл', 'badge' => 'bg-success-subtle text-success-emphasis border border-success-subtle'],
+        'no_show' => ['label' => 'Не пришёл', 'badge' => 'bg-warning-subtle text-warning-emphasis border border-warning-subtle'],
+        'hired' => ['label' => 'Принят', 'badge' => 'bg-info-subtle text-info-emphasis border border-info-subtle'],
+        'rejected' => ['label' => 'Отказ', 'badge' => 'bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle'],
     ];
 @endphp
 
@@ -69,7 +69,8 @@
         <table class="table table-striped table-hover mb-0">
             <thead>
             <tr>
-                <th style="width: 140px;">Дата</th>
+                <th style="width: 120px;">Дата</th>
+                <th style="width: 100px;">Время</th>
                 <th>Кандидат</th>
                 <th style="width: 160px;">Телефон</th>
                 <th style="width: 160px;">Источник</th>
@@ -85,10 +86,11 @@
                 @endphp
                 <tr>
                     <td>{{ $i->interview_date }}</td>
+                    <td class="text-muted">{{ $i->interview_time ? substr($i->interview_time, 0, 5) : '—' }}</td>
                     <td class="fw-semibold">{{ $i->candidate_name }}</td>
                     <td>{{ $i->candidate_phone ?? '—' }}</td>
                     <td>{{ $i->source ?? '—' }}</td>
-                    <td><span class="badge {{ $s['badge'] }}">{{ $s['label'] }}</span></td>
+                    <td><span class="badge rounded-pill {{ $s['badge'] }}">{{ $s['label'] }}</span></td>
                     <td>{{ $i->comment ?? '—' }}</td>
                     <td class="text-end">
                         <div class="dropdown">
@@ -118,7 +120,7 @@
 
             @if($interviews->count() === 0)
                 <tr>
-                    <td colspan="7" class="text-center text-muted p-4">Пока нет собеседований</td>
+                    <td colspan="8" class="text-center text-muted p-4">Пока нет собеседований</td>
                 </tr>
             @endif
             </tbody>

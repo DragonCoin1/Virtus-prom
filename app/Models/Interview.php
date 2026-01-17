@@ -11,12 +11,18 @@ class Interview extends Model
 
     protected $fillable = [
         'interview_date',
+        'interview_time',
         'candidate_name',
         'candidate_phone',
         'source',
         'status',
         'comment',
         'created_by',
+    ];
+
+    protected $casts = [
+        'interview_date' => 'date',
+        'interview_time' => 'string',
     ];
 
     public function createdBy()
