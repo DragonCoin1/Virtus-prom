@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,15 +19,55 @@ class ModuleController extends Controller
                 $join->on('r.route_id', '=', 'ra.route_id');
             })
             ->select([
-                'r.*',
+                'r.route_id',
+                'r.route_code',
+                'r.route_district',
+                'r.route_type',
+                'r.boxes_count',
+                'r.entrances_count',
                 'ra.last_action_date',
-            ]);
+            ])
+            ->orderByRaw('ra.last_action_date IS NULL DESC')
+            ->orderBy('ra.last_action_date', 'asc')
+            ->orderBy('r.route_code', 'asc');
 
-        $q->orderByRaw('ra.last_action_date IS NULL DESC')
-          ->orderBy('ra.last_action_date', 'asc')
-          ->orderBy('r.route_code', 'asc');
+        $routes = $q->paginate(80)->withQueryString();
 
-        $routes = $q->paginate(80);
+        $now = Carbon::now();
+
+        $routes->getCollection()->transform(function ($route) use ($now) {
+            $route->last_action_date_parsed = $route->last_action_date
+                ? Carbon::parse($route->last_action_date)
+                : null;
+
+            if (!$route->last_action_date_parsed) {
+                $route->age_label = '—';
+                $route->is_stale = true;
+                return $route;
+            }
+
+            $diffMinutes = $route->last_action_date_parsed->diffInMinutes($now);
+            $diffHours = $route->last_action_date_parsed->diffInHours($now);
+            $diffDays = $route->last_action_date_parsed->diffInDays($now);
+            $diffMonths = $route->last_action_date_parsed->diffInMonths($now);
+            $diffYears = $route->last_action_date_parsed->diffInYears($now);
+
+            if ($diffMinutes < 60) {
+                $route->age_label = $diffMinutes . ' мин';
+            } elseif ($diffHours < 24) {
+                $route->age_label = $diffHours . ' ч';
+            } elseif ($diffDays < 30) {
+                $route->age_label = $diffDays . ' д';
+            } elseif ($diffMonths < 12) {
+                $route->age_label = $diffMonths . ' мес';
+            } else {
+                $route->age_label = $diffYears . ' г';
+            }
+
+            $route->is_stale = $diffDays > 7;
+
+            return $route;
+        });
 
         return view('modules.cards', compact('routes'));
     }

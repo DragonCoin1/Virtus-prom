@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Interview;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class InterviewsController extends Controller
 {
     public function index(Request $request)
     {
+        $today = Carbon::today()->toDateString();
         $q = Interview::query()->with(['createdBy']);
 
         if ($request->filled('date_from')) {
@@ -32,7 +34,26 @@ class InterviewsController extends Controller
             });
         }
 
-        $interviews = $q->orderByDesc('interview_date')
+        $interviews = $q
+            ->orderByRaw(
+                "CASE\n" .
+                "WHEN status = 'planned' AND interview_date = ? THEN 0\n" .
+                "WHEN status = 'planned' THEN 1\n" .
+                "ELSE 2\n" .
+                "END ASC",
+                [$today]
+            )
+            ->orderByRaw(
+                "CASE\n" .
+                "WHEN status = 'planned' AND interview_time IS NULL THEN 1\n" .
+                "WHEN status = 'planned' THEN 0\n" .
+                "ELSE NULL\n" .
+                "END ASC"
+            )
+            ->orderByRaw("CASE WHEN status = 'planned' THEN interview_date END ASC")
+            ->orderByRaw("CASE WHEN status = 'planned' THEN interview_time END ASC")
+            ->orderByRaw("CASE WHEN status <> 'planned' THEN interview_date END DESC")
+            ->orderByRaw("CASE WHEN status <> 'planned' THEN interview_time END DESC")
             ->orderByDesc('interview_id')
             ->paginate(30)
             ->appends($request->query());
@@ -51,6 +72,7 @@ class InterviewsController extends Controller
 
         Interview::create([
             'interview_date' => $data['interview_date'],
+            'interview_time' => $data['interview_time'] ?? null,
             'candidate_name' => $data['candidate_name'],
             'candidate_phone' => $data['candidate_phone'] ?? null,
             'source' => $data['source'] ?? null,
@@ -73,6 +95,7 @@ class InterviewsController extends Controller
 
         $interview->update([
             'interview_date' => $data['interview_date'],
+            'interview_time' => $data['interview_time'] ?? null,
             'candidate_name' => $data['candidate_name'],
             'candidate_phone' => $data['candidate_phone'] ?? null,
             'source' => $data['source'] ?? null,
@@ -93,6 +116,7 @@ class InterviewsController extends Controller
     {
         return $request->validate([
             'interview_date' => ['required', 'date'],
+            'interview_time' => ['nullable', 'date_format:H:i'],
             'candidate_name' => ['required', 'string', 'max:255'],
             'candidate_phone' => ['nullable', 'string', 'max:50'],
             'source' => ['nullable', 'string', 'max:120'],

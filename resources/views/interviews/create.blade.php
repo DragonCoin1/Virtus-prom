@@ -19,6 +19,12 @@
                        value="{{ old('interview_date', date('Y-m-d')) }}" required>
             </div>
 
+            <div class="col-md-2">
+                <label class="form-label">Время</label>
+                <input class="form-control" type="time" name="interview_time"
+                       value="{{ old('interview_time') }}">
+            </div>
+
             <div class="col-md-5">
                 <label class="form-label">Кандидат (ФИО)</label>
                 <input class="form-control" name="candidate_name" value="{{ old('candidate_name') }}" required>
