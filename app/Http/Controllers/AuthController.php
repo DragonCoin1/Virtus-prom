@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+
+class AuthController extends Controller
+{
+    public function showLogin()
+    {
+        return view('auth.login');
+    }
+
+    public function login(Request $request)
+    {
+        $request->validate([
+            'user_login' => ['required', 'string'],
+            'password'   => ['required', 'string'],
+        ]);
+
+        $user = DB::table('users')
+            ->where('user_login', $request->input('user_login'))
+            ->first();
+
+        if (!$user) {
+            return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
+        }
+
+        if (!Hash::check($request->input('password'), $user->user_password_hash)) {
+            return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
+        }
+
+        $eloquentUser = \App\Models\User::find($user->id);
+
+        if (!$eloquentUser || (int)$eloquentUser->user_is_active !== 1) {
+            return back()->withErrors(['user_login' => 'Аккаунт отключён']);
+        }
+
+        Auth::login($eloquentUser);
+
+        $eloquentUser->user_last_login_at = now();
+        $eloquentUser->save();
+
+        return redirect()->route('home');
+    }
+
+    public function logout()
+    {
+        Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
+
+        return redirect()->route('login');
+    }
+}
