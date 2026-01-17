@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -11,8 +13,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // ВАЖНО: пользователей/роли здесь не сидим,
-        // чтобы не снести реальный логин owner и права.
+        if (Schema::hasTable('roles')) {
+            $this->call(RolesSeeder::class);
+        }
+
+        if (Schema::hasTable('users')) {
+            $this->call(UsersSeeder::class);
+        }
+
         // Сидим только тестовые рабочие данные проекта.
         $this->call([
             FullTestSeeder::class,
