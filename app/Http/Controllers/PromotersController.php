@@ -53,6 +53,7 @@ class PromotersController extends Controller
         $payload = [
             'promoter_full_name' => $data['promoter_full_name'],
             'promoter_phone' => $data['promoter_phone'] ?? null,
+            'promoter_requisites' => $data['promoter_requisites'] ?? null,
             'promoter_status' => $data['promoter_status'],
             'hired_at' => $data['hired_at'] ?? null,
             'fired_at' => $data['fired_at'] ?? null,
@@ -87,6 +88,7 @@ class PromotersController extends Controller
         $payload = [
             'promoter_full_name' => $data['promoter_full_name'],
             'promoter_phone' => $data['promoter_phone'] ?? null,
+            'promoter_requisites' => $data['promoter_requisites'] ?? null,
             'promoter_status' => $data['promoter_status'],
             'hired_at' => $data['hired_at'] ?? null,
             'fired_at' => $data['fired_at'] ?? null,
