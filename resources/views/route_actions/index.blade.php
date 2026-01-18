@@ -90,9 +90,9 @@
                 <th>Промоутер</th>
                 <th>Маршрут</th>
                 <th>Макеты</th>
-                <th>Листовки</th>
-                <th>Расклейка</th>
-                <th>Визитки</th>
+                <th>Листовки<br><span class="text-muted" style="font-size: 12px;">сделано / выдано</span></th>
+                <th>Расклейка<br><span class="text-muted" style="font-size: 12px;">сделано / выдано</span></th>
+                <th>Визитки<br><span class="text-muted" style="font-size: 12px;">сделано / выдано</span></th>
                 <th>Ящики</th>
                 <th>Оплата</th>
                 <th>Комментарий</th>
@@ -109,9 +109,18 @@
                     <td>{{ $a->promoter?->promoter_full_name ?? ('ID ' . $a->promoter_id) }}</td>
                     <td>{{ $a->route?->route_code ?? ('ID ' . $a->route_id) }}</td>
                     <td>{{ $templatesText($a->templates) }}</td>
-                    <td>{{ $a->leaflets_total }}</td>
-                    <td>{{ $a->posters_total }}</td>
-                    <td>{{ $a->cards_count }}</td>
+                    <td>
+                        <div class="fw-semibold">{{ $a->leaflets_total }}</div>
+                        <div class="text-muted" style="font-size: 12px;">выдано {{ $a->leaflets_issued ?? 0 }}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold">{{ $a->posters_total }}</div>
+                        <div class="text-muted" style="font-size: 12px;">выдано {{ $a->posters_issued ?? 0 }}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold">{{ $a->cards_count }}</div>
+                        <div class="text-muted" style="font-size: 12px;">выдано {{ $a->cards_issued ?? 0 }}</div>
+                    </td>
                     <td>{{ $a->boxes_done }}</td>
                     <td>{{ $a->payment_amount ?? 0 }}</td>
                     <td>{{ $a->action_comment }}</td>
@@ -125,7 +134,7 @@
                                         data-bs-toggle="dropdown"
                                         aria-expanded="false"
                                         title="Действия">
-                                    ⋮
+                                    Действия
                                 </button>
 
                                 <ul class="dropdown-menu dropdown-menu-end">
