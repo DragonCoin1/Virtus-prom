@@ -28,6 +28,12 @@
                        value="{{ old('promoter_phone', $promoter->promoter_phone) }}">
             </div>
 
+            <div class="col-md-6">
+                <label class="form-label">Реквизиты</label>
+                <input class="form-control" name="promoter_requisites"
+                       value="{{ old('promoter_requisites', $promoter->promoter_requisites) }}">
+            </div>
+
             <div class="col-md-4">
                 <label class="form-label">Статус</label>
                 @php $v = old('promoter_status', $promoter->promoter_status); @endphp

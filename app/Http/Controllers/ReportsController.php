@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ReportsController extends Controller
 {
@@ -40,7 +41,43 @@ class ReportsController extends Controller
                 DB::raw('SUM(cards_issued) as sum_cards_issued'),
             ]);
 
-        $daily = $dailyQ->orderBy('action_date', $sort)->get();
+        $daily = $dailyQ->orderBy('action_date', $sort)
+            ->paginate(30)
+            ->appends($request->query());
+
+        $promoterPayments = collect();
+        $dailyDates = $daily->pluck('action_date')->all();
+        if (!empty($dailyDates)) {
+            $hasRequisites = Schema::hasColumn('promoters', 'promoter_requisites');
+            $groupBy = [
+                'action_date',
+                'promoters.promoter_id',
+                'promoters.promoter_full_name',
+            ];
+            $select = [
+                'action_date',
+                'promoters.promoter_full_name',
+                DB::raw('SUM(payment_amount) as sum_payment'),
+            ];
+
+            if ($hasRequisites) {
+                $groupBy[] = 'promoters.promoter_requisites';
+                $select[] = 'promoters.promoter_requisites';
+            } else {
+                $select[] = DB::raw('NULL as promoter_requisites');
+            }
+
+            $promoterPayments = DB::table('route_actions')
+                ->join('promoters', 'promoters.promoter_id', '=', 'route_actions.promoter_id')
+                ->whereDate('action_date', '>=', $dateFrom)
+                ->whereDate('action_date', '<=', $dateTo)
+                ->whereIn('action_date', $dailyDates)
+                ->groupBy($groupBy)
+                ->select($select)
+                ->orderBy('action_date', $sort)
+                ->orderBy('promoters.promoter_full_name')
+                ->get();
+        }
 
         // Верхняя сводка за текущий месяц (самоформируется)
         $monthFrom = $now->copy()->startOfMonth()->format('Y-m-d');
@@ -89,6 +126,7 @@ class ReportsController extends Controller
 
         return view('reports.index', compact(
             'daily',
+            'promoterPayments',
             'dateFrom',
             'dateTo',
             'sort',
