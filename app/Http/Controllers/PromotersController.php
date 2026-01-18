@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Promoter;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class PromotersController extends Controller
 {
@@ -49,14 +50,20 @@ class PromotersController extends Controller
             $data['fired_at'] ?? null
         );
 
-        Promoter::create([
+        $payload = [
             'promoter_full_name' => $data['promoter_full_name'],
             'promoter_phone' => $data['promoter_phone'] ?? null,
             'promoter_status' => $data['promoter_status'],
             'hired_at' => $data['hired_at'] ?? null,
             'fired_at' => $data['fired_at'] ?? null,
             'promoter_comment' => $data['promoter_comment'] ?? null,
-        ]);
+        ];
+
+        if (Schema::hasColumn('promoters', 'promoter_requisites')) {
+            $payload['promoter_requisites'] = $data['promoter_requisites'] ?? null;
+        }
+
+        Promoter::create($payload);
 
         return redirect()->route('module.promoters')->with('ok', 'Промоутер добавлен');
     }
@@ -77,14 +84,20 @@ class PromotersController extends Controller
             $data['fired_at'] ?? null
         );
 
-        $promoter->update([
+        $payload = [
             'promoter_full_name' => $data['promoter_full_name'],
             'promoter_phone' => $data['promoter_phone'] ?? null,
             'promoter_status' => $data['promoter_status'],
             'hired_at' => $data['hired_at'] ?? null,
             'fired_at' => $data['fired_at'] ?? null,
             'promoter_comment' => $data['promoter_comment'] ?? null,
-        ]);
+        ];
+
+        if (Schema::hasColumn('promoters', 'promoter_requisites')) {
+            $payload['promoter_requisites'] = $data['promoter_requisites'] ?? null;
+        }
+
+        $promoter->update($payload);
 
         return redirect()->route('module.promoters')->with('ok', 'Промоутер обновлён');
     }
@@ -100,6 +113,7 @@ class PromotersController extends Controller
         return $request->validate([
             'promoter_full_name' => ['required', 'string', 'max:255'],
             'promoter_phone' => ['nullable', 'string', 'max:50'],
+            'promoter_requisites' => ['nullable', 'string', 'max:255'],
             'promoter_status' => ['required', 'in:active,trainee,paused,fired'],
             'hired_at' => ['nullable', 'date'],
             'fired_at' => ['nullable', 'date'],
