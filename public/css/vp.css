@@ -121,6 +121,7 @@ body.vp-body{
 
 .vp-table-dropdown{
     overflow: visible;
+    position: relative;
 }
 
 .vp-table-dropdown .dropdown-menu{
