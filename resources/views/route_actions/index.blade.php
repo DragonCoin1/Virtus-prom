@@ -134,7 +134,7 @@
                                         data-bs-toggle="dropdown"
                                         aria-expanded="false"
                                         title="Действия">
-                                    Действия
+                                    ⋮
                                 </button>
 
                                 <ul class="dropdown-menu dropdown-menu-end">

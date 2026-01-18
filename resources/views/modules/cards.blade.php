@@ -65,7 +65,7 @@
                         <td class="text-end">
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                                    Действия
+                                    ⋮
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li>
