@@ -93,6 +93,7 @@ class FullTestSeeder extends Seeder
         if (in_array('user_login', $userCols, true)) $ownerRow['user_login'] = 'owner';
         if (in_array('user_full_name', $userCols, true)) $ownerRow['user_full_name'] = 'Owner';
         if (in_array('role_id', $userCols, true)) $ownerRow['role_id'] = $ownerRoleId;
+        if (in_array('user_password_hash', $userCols, true)) $ownerRow['user_password_hash'] = Hash::make('owner12345');
         if (in_array('password', $userCols, true)) $ownerRow['password'] = Hash::make('owner12345');
         if (in_array('created_at', $userCols, true)) $ownerRow['created_at'] = now();
         if (in_array('updated_at', $userCols, true)) $ownerRow['updated_at'] = now();
@@ -101,6 +102,7 @@ class FullTestSeeder extends Seeder
         if (in_array('user_login', $userCols, true)) $managerRow['user_login'] = 'manager';
         if (in_array('user_full_name', $userCols, true)) $managerRow['user_full_name'] = 'Manager';
         if (in_array('role_id', $userCols, true)) $managerRow['role_id'] = $managerRoleId;
+        if (in_array('user_password_hash', $userCols, true)) $managerRow['user_password_hash'] = Hash::make('manager12345');
         if (in_array('password', $userCols, true)) $managerRow['password'] = Hash::make('manager12345');
         if (in_array('created_at', $userCols, true)) $managerRow['created_at'] = now();
         if (in_array('updated_at', $userCols, true)) $managerRow['updated_at'] = now();

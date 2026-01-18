@@ -41,11 +41,22 @@
 
             <div class="col-md-4">
                 <label class="form-label">Маршрут</label>
-                <select class="form-select" name="route_id" required>
+                <input class="form-control mb-2" type="text" placeholder="Поиск маршрута" id="routeSearch">
+                <select class="form-select" name="route_id" id="routeSelect" required>
                     <option value="">— выбрать —</option>
                     @foreach($routes as $r)
-                        <option value="{{ $r->route_id }}" @selected(old('route_id', $routeAction->route_id)==$r->route_id)>
-                            {{ $r->route_code }}
+                        @php
+                            $routeLabel = $r->route_code;
+                            if (!empty($r->route_area)) {
+                                $routeLabel .= ' — ' . $r->route_area;
+                            } elseif (!empty($r->route_district)) {
+                                $routeLabel .= ' — ' . $r->route_district;
+                            }
+                        @endphp
+                        <option value="{{ $r->route_id }}"
+                                data-search="{{ mb_strtolower($routeLabel) }}"
+                                @selected(old('route_id', $routeAction->route_id)==$r->route_id)>
+                            {{ $routeLabel }}
                         </option>
                     @endforeach
                 </select>
@@ -204,6 +215,28 @@
     });
 
     updateText();
+})();
+</script>
+<script>
+(function () {
+    const searchInput = document.getElementById('routeSearch');
+    const select = document.getElementById('routeSelect');
+    if (!searchInput || !select) return;
+
+    const options = Array.from(select.options);
+    const filterOptions = () => {
+        const needle = searchInput.value.trim().toLowerCase();
+        options.forEach(option => {
+            if (!option.value) {
+                option.hidden = false;
+                return;
+            }
+            const hay = option.getAttribute('data-search') || option.textContent.toLowerCase();
+            option.hidden = needle.length > 0 && !hay.includes(needle);
+        });
+    };
+
+    searchInput.addEventListener('input', filterOptions);
 })();
 </script>
 @endsection

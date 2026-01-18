@@ -133,9 +133,32 @@
                     <td>{{ (int)$d->sum_posters_issued }}</td>
                     <td>{{ (int)$d->sum_cards_issued }}</td>
                 </tr>
+
+                @php
+                    $rows = $paymentsByDate[$d->action_date] ?? collect();
+                @endphp
+                <tr>
+                    <td colspan="9" class="bg-light">
+                        <div class="text-muted mb-1">Оплата по промоутерам</div>
+                        @if($rows->count() === 0)
+                            <div class="text-muted">Нет данных</div>
+                        @else
+                            <div class="d-flex flex-column gap-1">
+                                @foreach($rows as $r)
+                                    @php
+                                        $requisites = $r->promoter_requisites ? ' ' . $r->promoter_requisites : '';
+                                    @endphp
+                                    <div>
+                                        {{ $r->promoter_full_name ?? ('ID ' . $r->promoter_id) }}{{ $requisites }} — <strong>{{ (int)$r->sum_payment }}</strong>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </td>
+                </tr>
             @endforeach
 
-            @if(count($daily) === 0)
+            @if($daily->count() === 0)
                 <tr>
                     <td colspan="9" class="text-center text-muted p-4">Нет данных за выбранный период</td>
                 </tr>
@@ -143,5 +166,8 @@
             </tbody>
         </table>
     </div>
+</div>
+<div class="mt-3">
+    {{ $daily->links() }}
 </div>
 @endsection
