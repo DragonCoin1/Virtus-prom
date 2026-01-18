@@ -46,25 +46,16 @@ class ModuleController extends Controller
                 return $route;
             }
 
-            $diffMinutes = $route->last_action_date_parsed->diffInMinutes($now);
-            $diffHours = $route->last_action_date_parsed->diffInHours($now);
-            $diffDays = $route->last_action_date_parsed->diffInDays($now);
-            $diffMonths = $route->last_action_date_parsed->diffInMonths($now);
-            $diffYears = $route->last_action_date_parsed->diffInYears($now);
+            $route->age_label = $route->last_action_date_parsed->diffForHumans(
+                $now,
+                [
+                    'parts' => 1,
+                    'short' => true,
+                    'syntax' => Carbon::DIFF_ABSOLUTE,
+                ]
+            );
 
-            if ($diffMinutes < 60) {
-                $route->age_label = $diffMinutes . ' мин';
-            } elseif ($diffHours < 24) {
-                $route->age_label = $diffHours . ' ч';
-            } elseif ($diffDays < 30) {
-                $route->age_label = $diffDays . ' д';
-            } elseif ($diffMonths < 12) {
-                $route->age_label = $diffMonths . ' мес';
-            } else {
-                $route->age_label = $diffYears . ' г';
-            }
-
-            $route->is_stale = $diffDays > 7;
+            $route->is_stale = $route->last_action_date_parsed->diffInDays($now) > 7;
 
             return $route;
         });

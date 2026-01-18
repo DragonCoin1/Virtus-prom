@@ -17,7 +17,7 @@
     </div>
     <div class="card-footer d-flex gap-2">
         <button class="btn btn-primary">Сохранить</button>
-        <a class="btn btn-outline-secondary" href="{{ route('routes.index') }}">Назад</a>
+        <a class="btn btn-outline-secondary" href="{{ route('module.cards') }}">Назад</a>
     </div>
 </form>
 @endsection

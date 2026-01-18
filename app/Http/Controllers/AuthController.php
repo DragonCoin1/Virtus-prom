@@ -44,7 +44,7 @@ class AuthController extends Controller
         $eloquentUser->user_last_login_at = now();
         $eloquentUser->save();
 
-        return redirect()->route('home');
+        return redirect()->route('module.route_actions');
     }
 
     public function logout()

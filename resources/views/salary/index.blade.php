@@ -6,6 +6,14 @@
     $dateFrom = request('date_from');
     $dateTo = request('date_to');
     $promoterId = request('promoter_id');
+    $periodLabel = 'всё время';
+    if (!empty($dateFrom) && !empty($dateTo)) {
+        $periodLabel = $dateFrom . ' — ' . $dateTo;
+    } elseif (!empty($dateFrom)) {
+        $periodLabel = 'с ' . $dateFrom;
+    } elseif (!empty($dateTo)) {
+        $periodLabel = 'до ' . $dateTo;
+    }
 @endphp
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -57,6 +65,7 @@
         <table class="table table-striped table-hover mb-0">
             <thead>
             <tr>
+                <th style="width: 160px;">Период</th>
                 <th>Промоутер</th>
                 <th style="width: 160px;">По разноске</th>
                 <th style="width: 160px;">Корректировки</th>
@@ -66,6 +75,7 @@
             <tbody>
             @foreach($rows as $r)
                 <tr>
+                    <td class="text-muted">{{ $periodLabel }}</td>
                     <td class="fw-semibold">{{ $r['promoter_name'] }}</td>
                     <td>{{ $r['sum_payment'] }}</td>
                     <td>{{ $r['sum_adj'] }}</td>
@@ -74,13 +84,14 @@
             @endforeach
 
             @if(count($rows) === 0)
-                <tr><td colspan="4" class="text-center text-muted p-4">Нет данных за выбранный период</td></tr>
+                <tr><td colspan="5" class="text-center text-muted p-4">Нет данных за выбранный период</td></tr>
             @endif
             </tbody>
 
             @if(count($rows) > 0)
                 <tfoot>
                 <tr>
+                    <th class="text-muted">{{ $periodLabel }}</th>
                     <th>Итого</th>
                     <th>{{ $totalPayment }}</th>
                     <th>{{ $totalAdj }}</th>
@@ -121,13 +132,18 @@
                     <td>{{ $a->createdBy?->user_login ?? '—' }}</td>
                     <td class="text-end">
                         @if(!empty($canEdit))
-                            <form method="POST"
-                                  action="{{ route('salary.adjustments.destroy', $a) }}"
-                                  onsubmit="return confirm('Удалить корректировку?');">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-sm btn-outline-danger">×</button>
-                            </form>
+                            <div class="d-flex justify-content-end gap-2">
+                                <a class="btn btn-sm btn-outline-secondary" href="{{ route('salary.adjustments.edit', $a) }}">
+                                    Править
+                                </a>
+                                <form method="POST"
+                                      action="{{ route('salary.adjustments.destroy', $a) }}"
+                                      onsubmit="return confirm('Удалить корректировку?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-outline-danger">×</button>
+                                </form>
+                            </div>
                         @endif
                     </td>
                 </tr>

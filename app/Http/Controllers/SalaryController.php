@@ -140,6 +140,32 @@ class SalaryController extends Controller
         return redirect()->route('salary.index')->with('ok', 'Корректировка добавлена');
     }
 
+    public function editAdjustment(SalaryAdjustment $salaryAdjustment)
+    {
+        $promoters = Promoter::orderBy('promoter_full_name')->get();
+
+        return view('salary.adjustment_edit', compact('promoters', 'salaryAdjustment'));
+    }
+
+    public function updateAdjustment(Request $request, SalaryAdjustment $salaryAdjustment)
+    {
+        $data = $request->validate([
+            'promoter_id' => ['required', 'integer', 'exists:promoters,promoter_id'],
+            'adj_date' => ['required', 'date'],
+            'amount' => ['required', 'integer'],
+            'comment' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $salaryAdjustment->update([
+            'promoter_id' => (int)$data['promoter_id'],
+            'adj_date' => $data['adj_date'],
+            'amount' => (int)$data['amount'],
+            'comment' => $data['comment'] ?? null,
+        ]);
+
+        return redirect()->route('salary.index')->with('ok', 'Корректировка обновлена');
+    }
+
     public function destroyAdjustment(SalaryAdjustment $salaryAdjustment)
     {
         $salaryAdjustment->delete();
