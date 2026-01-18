@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Interview;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class InterviewsController extends Controller
 {
@@ -12,6 +13,7 @@ class InterviewsController extends Controller
     {
         $today = Carbon::today()->toDateString();
         $q = Interview::query()->with(['createdBy']);
+        $hasInterviewTime = Schema::hasColumn('interviews', 'interview_time');
 
         if ($request->filled('date_from')) {
             $q->whereDate('interview_date', '>=', $request->input('date_from'));
@@ -34,7 +36,7 @@ class InterviewsController extends Controller
             });
         }
 
-        $interviews = $q
+        $interviewsQuery = $q
             ->orderByRaw(
                 "CASE\n" .
                 "WHEN status = 'planned' AND interview_date = ? THEN 0\n" .
@@ -42,18 +44,33 @@ class InterviewsController extends Controller
                 "ELSE 2\n" .
                 "END ASC",
                 [$today]
-            )
-            ->orderByRaw(
+            );
+
+        if ($hasInterviewTime) {
+            $interviewsQuery->orderByRaw(
                 "CASE\n" .
                 "WHEN status = 'planned' AND interview_time IS NULL THEN 1\n" .
                 "WHEN status = 'planned' THEN 0\n" .
                 "ELSE NULL\n" .
                 "END ASC"
-            )
-            ->orderByRaw("CASE WHEN status = 'planned' THEN interview_date END ASC")
-            ->orderByRaw("CASE WHEN status = 'planned' THEN interview_time END ASC")
-            ->orderByRaw("CASE WHEN status <> 'planned' THEN interview_date END DESC")
-            ->orderByRaw("CASE WHEN status <> 'planned' THEN interview_time END DESC")
+            );
+        }
+
+        $interviewsQuery
+            ->orderByRaw("CASE WHEN status = 'planned' THEN interview_date END ASC");
+
+        if ($hasInterviewTime) {
+            $interviewsQuery->orderByRaw("CASE WHEN status = 'planned' THEN interview_time END ASC");
+        }
+
+        $interviewsQuery
+            ->orderByRaw("CASE WHEN status <> 'planned' THEN interview_date END DESC");
+
+        if ($hasInterviewTime) {
+            $interviewsQuery->orderByRaw("CASE WHEN status <> 'planned' THEN interview_time END DESC");
+        }
+
+        $interviews = $interviewsQuery
             ->orderByDesc('interview_id')
             ->paginate(30)
             ->appends($request->query());
@@ -69,17 +86,23 @@ class InterviewsController extends Controller
     public function store(Request $request)
     {
         $data = $this->validateInterview($request);
+        $hasInterviewTime = Schema::hasColumn('interviews', 'interview_time');
 
-        Interview::create([
+        $payload = [
             'interview_date' => $data['interview_date'],
-            'interview_time' => $data['interview_time'] ?? null,
             'candidate_name' => $data['candidate_name'],
             'candidate_phone' => $data['candidate_phone'] ?? null,
             'source' => $data['source'] ?? null,
             'status' => $data['status'] ?? 'planned',
             'comment' => $data['comment'] ?? null,
             'created_by' => auth()->id(),
-        ]);
+        ];
+
+        if ($hasInterviewTime) {
+            $payload['interview_time'] = $data['interview_time'] ?? null;
+        }
+
+        Interview::create($payload);
 
         return redirect()->route('interviews.index')->with('ok', 'Собеседование добавлено');
     }
@@ -92,16 +115,22 @@ class InterviewsController extends Controller
     public function update(Request $request, Interview $interview)
     {
         $data = $this->validateInterview($request);
+        $hasInterviewTime = Schema::hasColumn('interviews', 'interview_time');
 
-        $interview->update([
+        $payload = [
             'interview_date' => $data['interview_date'],
-            'interview_time' => $data['interview_time'] ?? null,
             'candidate_name' => $data['candidate_name'],
             'candidate_phone' => $data['candidate_phone'] ?? null,
             'source' => $data['source'] ?? null,
             'status' => $data['status'] ?? 'planned',
             'comment' => $data['comment'] ?? null,
-        ]);
+        ];
+
+        if ($hasInterviewTime) {
+            $payload['interview_time'] = $data['interview_time'] ?? null;
+        }
+
+        $interview->update($payload);
 
         return redirect()->route('interviews.index')->with('ok', 'Собеседование обновлено');
     }

@@ -48,7 +48,7 @@
 </div>
 
 <div class="card">
-    <div class="table-responsive">
+    <div class="table-responsive vp-table-scroll">
         <table class="table table-striped table-hover mb-0">
             <thead>
             <tr>

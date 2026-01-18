@@ -19,7 +19,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware('auth')->group(function () {
 
     Route::get('/', function () {
-        return view('home');
+        return redirect()->route('module.route_actions');
     })->name('home');
 
     // PROMOTERS
@@ -160,9 +160,17 @@ Route::middleware('auth')->group(function () {
         ->middleware('module:salary,edit')
         ->name('salary.adjustments.create');
 
+    Route::get('/salary/adjustments/{salaryAdjustment}/edit', [SalaryController::class, 'editAdjustment'])
+        ->middleware('module:salary,edit')
+        ->name('salary.adjustments.edit');
+
     Route::post('/salary/adjustments', [SalaryController::class, 'storeAdjustment'])
         ->middleware('module:salary,edit')
         ->name('salary.adjustments.store');
+
+    Route::put('/salary/adjustments/{salaryAdjustment}', [SalaryController::class, 'updateAdjustment'])
+        ->middleware('module:salary,edit')
+        ->name('salary.adjustments.update');
 
     Route::delete('/salary/adjustments/{salaryAdjustment}', [SalaryController::class, 'destroyAdjustment'])
         ->middleware('module:salary,edit')

@@ -40,7 +40,29 @@ class ReportsController extends Controller
                 DB::raw('SUM(cards_issued) as sum_cards_issued'),
             ]);
 
-        $daily = $dailyQ->orderBy('action_date', $sort)->get();
+        $daily = $dailyQ->orderBy('action_date', $sort)
+            ->paginate(20)
+            ->withQueryString();
+
+        $dailyDates = $daily->pluck('action_date')->toArray();
+        $paymentsByDate = collect();
+        if (!empty($dailyDates)) {
+            $paymentsByDate = DB::table('route_actions as ra')
+                ->leftJoin('promoters as p', 'p.promoter_id', '=', 'ra.promoter_id')
+                ->whereIn('ra.action_date', $dailyDates)
+                ->groupBy('ra.action_date', 'ra.promoter_id', 'p.promoter_full_name', 'p.promoter_requisites')
+                ->select([
+                    'ra.action_date',
+                    'ra.promoter_id',
+                    'p.promoter_full_name',
+                    'p.promoter_requisites',
+                    DB::raw('SUM(ra.payment_amount) as sum_payment'),
+                ])
+                ->orderBy('ra.action_date', 'asc')
+                ->orderBy('p.promoter_full_name', 'asc')
+                ->get()
+                ->groupBy('action_date');
+        }
 
         // Верхняя сводка за текущий месяц (самоформируется)
         $monthFrom = $now->copy()->startOfMonth()->format('Y-m-d');
@@ -94,7 +116,8 @@ class ReportsController extends Controller
             'sort',
             'month',
             'priceBox',
-            'priceLeaflet'
+            'priceLeaflet',
+            'paymentsByDate'
         ));
     }
 }

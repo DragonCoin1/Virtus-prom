@@ -52,6 +52,7 @@ class PromotersController extends Controller
         Promoter::create([
             'promoter_full_name' => $data['promoter_full_name'],
             'promoter_phone' => $data['promoter_phone'] ?? null,
+            'promoter_requisites' => $data['promoter_requisites'] ?? null,
             'promoter_status' => $data['promoter_status'],
             'hired_at' => $data['hired_at'] ?? null,
             'fired_at' => $data['fired_at'] ?? null,
@@ -80,6 +81,7 @@ class PromotersController extends Controller
         $promoter->update([
             'promoter_full_name' => $data['promoter_full_name'],
             'promoter_phone' => $data['promoter_phone'] ?? null,
+            'promoter_requisites' => $data['promoter_requisites'] ?? null,
             'promoter_status' => $data['promoter_status'],
             'hired_at' => $data['hired_at'] ?? null,
             'fired_at' => $data['fired_at'] ?? null,
@@ -100,6 +102,7 @@ class PromotersController extends Controller
         return $request->validate([
             'promoter_full_name' => ['required', 'string', 'max:255'],
             'promoter_phone' => ['nullable', 'string', 'max:50'],
+            'promoter_requisites' => ['nullable', 'string', 'max:255'],
             'promoter_status' => ['required', 'in:active,trainee,paused,fired'],
             'hired_at' => ['nullable', 'date'],
             'fired_at' => ['nullable', 'date'],
