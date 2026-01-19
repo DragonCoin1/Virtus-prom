@@ -15,6 +15,7 @@
     <h3 class="m-0">Промоутеры</h3>
     <div class="d-flex gap-2">
         <a class="btn btn-primary btn-sm" href="{{ route('promoters.create') }}">+ Добавить</a>
+        <a class="btn btn-outline-primary btn-sm" href="{{ route('promoters.import.form') }}">Импорт</a>
     </div>
 </div>
 

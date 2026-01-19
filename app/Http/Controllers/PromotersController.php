@@ -39,6 +39,100 @@ class PromotersController extends Controller
         return view('promoters.create');
     }
 
+    public function importForm()
+    {
+        return view('promoters.import');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'csv_file' => ['required', 'file'],
+        ]);
+
+        $file = $request->file('csv_file');
+        $handle = fopen($file->getRealPath(), 'r');
+        if ($handle === false) {
+            return back()->withErrors(['csv_file' => 'Не удалось открыть файл']);
+        }
+
+        $header = fgetcsv($handle, 0, ';');
+        if (!$header) {
+            fclose($handle);
+            return back()->withErrors(['csv_file' => 'CSV файл пустой']);
+        }
+
+        $header = array_map(fn($h) => trim((string) $h), $header);
+        $map = array_flip($header);
+
+        if (!isset($map['promoter_full_name'])) {
+            fclose($handle);
+            return back()->withErrors(['csv_file' => 'Не найдена колонка promoter_full_name']);
+        }
+
+        $columns = Schema::getColumnListing('promoters');
+        $hasRequisites = Schema::hasColumn('promoters', 'promoter_requisites');
+        $imported = 0;
+
+        while (($row = fgetcsv($handle, 0, ';')) !== false) {
+            if (count($row) === 1 && trim((string) $row[0]) === '') {
+                continue;
+            }
+
+            $row = array_map(fn($v) => trim((string) $v), $row);
+
+            $fullName = $row[$map['promoter_full_name']] ?? '';
+            if ($fullName === '') {
+                continue;
+            }
+
+            $phone = $map['promoter_phone'] ?? null;
+            $status = $map['promoter_status'] ?? null;
+            $hiredAt = $map['hired_at'] ?? null;
+            $firedAt = $map['fired_at'] ?? null;
+            $comment = $map['promoter_comment'] ?? null;
+            $requisites = $map['promoter_requisites'] ?? null;
+
+            $payload = [
+                'promoter_full_name' => $fullName,
+                'promoter_phone' => $phone !== null ? ($row[$phone] ?? null) : null,
+                'promoter_status' => $status !== null && ($row[$status] ?? '') !== ''
+                    ? $row[$status]
+                    : 'active',
+                'hired_at' => $hiredAt !== null ? ($row[$hiredAt] ?? null) : null,
+                'fired_at' => $firedAt !== null ? ($row[$firedAt] ?? null) : null,
+                'promoter_comment' => $comment !== null ? ($row[$comment] ?? null) : null,
+            ];
+
+            if ($hasRequisites) {
+                $payload['promoter_requisites'] = $requisites !== null ? ($row[$requisites] ?? null) : null;
+            }
+
+            $payload['promoter_status'] = $this->applyStatusRules(
+                $payload['promoter_status'],
+                $payload['hired_at'] ?? null,
+                $payload['fired_at'] ?? null
+            );
+
+            $payload = array_intersect_key($payload, array_flip($columns));
+
+            if (!empty($payload['promoter_phone'])) {
+                Promoter::updateOrCreate(
+                    ['promoter_phone' => $payload['promoter_phone']],
+                    $payload
+                );
+            } else {
+                Promoter::create($payload);
+            }
+
+            $imported++;
+        }
+
+        fclose($handle);
+
+        return back()->with('ok', 'Импортировано: ' . $imported);
+    }
+
     public function store(Request $request)
     {
         $data = $this->validatePromoter($request);
