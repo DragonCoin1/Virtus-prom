@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ModuleController extends Controller
 {
@@ -28,8 +29,13 @@ class ModuleController extends Controller
                 'ra.last_action_date',
             ])
             ->orderByRaw('ra.last_action_date IS NULL DESC')
-            ->orderBy('ra.last_action_date', 'asc')
-            ->orderBy('r.route_code', 'asc');
+            ->orderBy('ra.last_action_date', 'asc');
+
+        if (Schema::hasColumn('routes', 'sort_order')) {
+            $q->orderBy('r.sort_order', 'asc');
+        }
+
+        $q->orderBy('r.route_code', 'asc');
 
         $routes = $q->paginate(80)->withQueryString();
 
