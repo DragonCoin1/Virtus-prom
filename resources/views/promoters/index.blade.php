@@ -15,6 +15,7 @@
     <h3 class="m-0">Промоутеры</h3>
     <div class="d-flex gap-2">
         <a class="btn btn-primary btn-sm" href="{{ route('promoters.create') }}">+ Добавить</a>
+        <a class="btn btn-outline-primary btn-sm" href="{{ route('promoters.import.form') }}">Импорт</a>
     </div>
 </div>
 
@@ -48,6 +49,7 @@
             <tr>
                 <th>ФИО</th>
                 <th>Телефон</th>
+                <th>Реквизиты</th>
                 <th>Статус</th>
                 <th>Найм</th>
                 <th>Увольнение</th>
@@ -60,6 +62,7 @@
                 <tr>
                     <td>{{ $p->promoter_full_name }}</td>
                     <td>{{ $p->promoter_phone }}</td>
+                    <td>{{ $p->promoter_requisites ?? '—' }}</td>
                     <td>
                         <span class="badge bg-secondary">
                             {{ $statusMap[$p->promoter_status] ?? $p->promoter_status }}
@@ -103,7 +106,7 @@
             @endforeach
 
             @if($promoters->count() === 0)
-                <tr><td colspan="7" class="text-center text-muted p-4">Пока нет промоутеров</td></tr>
+                <tr><td colspan="8" class="text-center text-muted p-4">Пока нет промоутеров</td></tr>
             @endif
             </tbody>
         </table>

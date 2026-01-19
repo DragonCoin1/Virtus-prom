@@ -14,8 +14,16 @@
         <div class="text-muted small mb-2">Первая строка — заголовки. Нужны колонки:</div>
         <pre class="mb-0">route_code;route_district;route_type;boxes_count;entrances_count;is_active;route_comment</pre>
         <div class="text-muted small mt-2">
-            route_type: city / private / mixed<br>
-            is_active: 1 или 0
+            route_code — код маршрута (например, мск-1)<br>
+            route_district — район (например, ЦАО)<br>
+            route_type — тип (city = город, private = частный сектор, mixed = смешанный)<br>
+            boxes_count — количество ящиков (например, 345)<br>
+            entrances_count — количество подъездов (например, 120)<br>
+            is_active — активен ли маршрут (1 или 0)<br>
+            route_comment — комментарий (необязательно)
+        </div>
+        <div class="text-muted small mt-2">
+            Пример строки: <code>мск-1;ЦАО;city;345;120;1;Маршрут мск-1(345)</code>
         </div>
     </div>
 </div>

@@ -135,7 +135,7 @@
                 </tr>
             @endforeach
 
-            @if(count($daily) === 0)
+            @if($daily->count() === 0)
                 <tr>
                     <td colspan="9" class="text-center text-muted p-4">Нет данных за выбранный период</td>
                 </tr>
@@ -143,5 +143,35 @@
             </tbody>
         </table>
     </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header">
+        Оплата промоутерам по дням
+    </div>
+    <div class="card-body">
+        @php
+            $paymentsByDay = $promoterPayments->groupBy('action_date');
+        @endphp
+
+        @forelse($paymentsByDay as $day => $entries)
+            <div class="mb-3">
+                <div class="fw-semibold">{{ $day }}</div>
+                <ul class="list-unstyled mb-0">
+                    @foreach($entries as $entry)
+                        <li>
+                            {{ $entry->promoter_full_name }} {{ $entry->promoter_requisites ?? '—' }} — <strong>{{ (int)$entry->sum_payment }}</strong>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @empty
+            <div class="text-muted">Нет данных по оплате за выбранный период.</div>
+        @endforelse
+    </div>
+</div>
+
+<div class="mt-3">
+    {{ $daily->links() }}
 </div>
 @endsection

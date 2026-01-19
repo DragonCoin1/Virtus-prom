@@ -35,6 +35,14 @@ Route::middleware('auth')->group(function () {
         ->middleware('module:promoters,edit')
         ->name('promoters.store');
 
+    Route::get('/promoters/import', [PromotersController::class, 'importForm'])
+        ->middleware('module:promoters,edit')
+        ->name('promoters.import.form');
+
+    Route::post('/promoters/import', [PromotersController::class, 'import'])
+        ->middleware('module:promoters,edit')
+        ->name('promoters.import');
+
     Route::get('/promoters/{promoter}/edit', [PromotersController::class, 'edit'])
         ->middleware('module:promoters,edit')
         ->name('promoters.edit');
