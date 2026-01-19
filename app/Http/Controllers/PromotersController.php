@@ -99,8 +99,8 @@ class PromotersController extends Controller
                 'promoter_status' => $status !== null && ($row[$status] ?? '') !== ''
                     ? $row[$status]
                     : 'active',
-                'hired_at' => $hiredAt !== null ? ($row[$hiredAt] ?? null) : null,
-                'fired_at' => $firedAt !== null ? ($row[$firedAt] ?? null) : null,
+                'hired_at' => $hiredAt !== null ? $this->normalizeDate($row[$hiredAt] ?? null) : null,
+                'fired_at' => $firedAt !== null ? $this->normalizeDate($row[$firedAt] ?? null) : null,
                 'promoter_comment' => $comment !== null ? ($row[$comment] ?? null) : null,
             ];
 
@@ -222,6 +222,21 @@ class PromotersController extends Controller
         }
 
         return $request->validate($rules);
+    }
+
+    private function normalizeDate(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '' || $value === '.' || $value === '-') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**
