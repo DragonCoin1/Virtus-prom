@@ -95,7 +95,7 @@ class PromotersController extends Controller
 
             $payload = [
                 'promoter_full_name' => $fullName,
-                'promoter_phone' => $phone !== null ? ($row[$phone] ?? null) : null,
+                'promoter_phone' => $phone !== null ? $this->normalizePhone($row[$phone] ?? null) : null,
                 'promoter_status' => $status !== null && ($row[$status] ?? '') !== ''
                     ? $row[$status]
                     : 'active',
@@ -122,7 +122,10 @@ class PromotersController extends Controller
                     $payload
                 );
             } else {
-                Promoter::create($payload);
+                Promoter::updateOrCreate(
+                    ['promoter_full_name' => $payload['promoter_full_name']],
+                    $payload
+                );
             }
 
             $imported++;
@@ -237,6 +240,17 @@ class PromotersController extends Controller
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    private function normalizePhone(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '' || $value === '.' || $value === '-') {
+            return null;
+        }
+
+        return $value;
     }
 
     /**
