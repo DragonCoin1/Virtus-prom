@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ModuleController extends Controller
 {
@@ -28,8 +29,15 @@ class ModuleController extends Controller
                 'ra.last_action_date',
             ])
             ->orderByRaw('ra.last_action_date IS NULL DESC')
-            ->orderBy('ra.last_action_date', 'asc')
-            ->orderBy('r.route_code', 'asc');
+            ->orderBy('ra.last_action_date', 'asc');
+
+        if (Schema::hasColumn('routes', 'sort_order')) {
+            $q->orderBy('r.sort_order', 'asc');
+        } else {
+            $this->applyNaturalRouteOrder($q, 'r.route_code');
+        }
+
+        $q->orderBy('r.route_code', 'asc');
 
         $routes = $q->paginate(80)->withQueryString();
 
@@ -81,5 +89,11 @@ class ModuleController extends Controller
     public function reports()
     {
         return view('modules.reports');
+    }
+
+    private function applyNaturalRouteOrder($query, string $column): void
+    {
+        $query->orderByRaw("REGEXP_REPLACE($column, '[0-9]+$', '') asc")
+            ->orderByRaw("CAST(REGEXP_SUBSTR($column, '[0-9]+$') AS UNSIGNED) asc");
     }
 }

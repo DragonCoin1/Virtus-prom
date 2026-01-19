@@ -8,6 +8,7 @@ use App\Models\Route;
 use App\Models\RouteAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class RouteActionsController extends Controller
@@ -15,7 +16,13 @@ class RouteActionsController extends Controller
     public function index(Request $request)
     {
         $promoters = Promoter::orderBy('promoter_full_name')->get();
-        $routes = Route::orderBy('route_code')->get();
+        $routesQuery = Route::query();
+        if (Schema::hasColumn('routes', 'sort_order')) {
+            $routesQuery->orderBy('sort_order');
+        } else {
+            $this->applyNaturalRouteOrder($routesQuery, 'route_code');
+        }
+        $routes = $routesQuery->orderBy('route_code')->get();
 
         $q = RouteAction::query()->with(['promoter', 'route', 'createdBy', 'templates']);
 
@@ -72,7 +79,13 @@ class RouteActionsController extends Controller
     public function create()
     {
         $promoters = Promoter::orderBy('promoter_full_name')->get();
-        $routes = Route::orderBy('route_code')->get();
+        $routesQuery = Route::query();
+        if (Schema::hasColumn('routes', 'sort_order')) {
+            $routesQuery->orderBy('sort_order');
+        } else {
+            $this->applyNaturalRouteOrder($routesQuery, 'route_code');
+        }
+        $routes = $routesQuery->orderBy('route_code')->get();
 
         $leafletTemplates = AdTemplate::where('template_type', 'leaflet')
             ->where('is_active', 1)
@@ -129,7 +142,13 @@ class RouteActionsController extends Controller
         $routeAction->load(['templates']);
 
         $promoters = Promoter::orderBy('promoter_full_name')->get();
-        $routes = Route::orderBy('route_code')->get();
+        $routesQuery = Route::query();
+        if (Schema::hasColumn('routes', 'sort_order')) {
+            $routesQuery->orderBy('sort_order');
+        } else {
+            $this->applyNaturalRouteOrder($routesQuery, 'route_code');
+        }
+        $routes = $routesQuery->orderBy('route_code')->get();
 
         $selectedIds = $routeAction->templates->pluck('template_id')->toArray();
 
@@ -220,5 +239,11 @@ class RouteActionsController extends Controller
                     ->where('is_active', 1),
             ],
         ]);
+    }
+
+    private function applyNaturalRouteOrder($query, string $column): void
+    {
+        $query->orderByRaw("REGEXP_REPLACE($column, '[0-9]+$', '') asc")
+            ->orderByRaw("CAST(REGEXP_SUBSTR($column, '[0-9]+$') AS UNSIGNED) asc");
     }
 }
