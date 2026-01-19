@@ -19,4 +19,14 @@ class Route extends Model
         'route_comment',
         'sort_order',
     ];
+
+    public function scopeOrderByCodeNatural($query, string $direction = 'asc')
+    {
+        $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+
+        return $query
+            ->orderByRaw("SUBSTRING_INDEX(route_code, '-', 1) {$direction}")
+            ->orderByRaw("CAST(SUBSTRING_INDEX(route_code, '-', -1) AS UNSIGNED) {$direction}")
+            ->orderBy('route_code', $direction);
+    }
 }

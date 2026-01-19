@@ -35,7 +35,9 @@ class ModuleController extends Controller
             $q->orderBy('r.sort_order', 'asc');
         }
 
-        $q->orderBy('r.route_code', 'asc');
+        $q->orderByRaw("SUBSTRING_INDEX(r.route_code, '-', 1) asc")
+            ->orderByRaw("CAST(SUBSTRING_INDEX(r.route_code, '-', -1) AS UNSIGNED) asc")
+            ->orderBy('r.route_code', 'asc');
 
         $routes = $q->paginate(80)->withQueryString();
 

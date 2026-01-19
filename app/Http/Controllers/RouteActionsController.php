@@ -20,7 +20,7 @@ class RouteActionsController extends Controller
         if (Schema::hasColumn('routes', 'sort_order')) {
             $routesQuery->orderBy('sort_order');
         }
-        $routes = $routesQuery->orderBy('route_code')->get();
+        $routes = $routesQuery->orderByCodeNatural()->get();
 
         $q = RouteAction::query()->with(['promoter', 'route', 'createdBy', 'templates']);
 
@@ -81,7 +81,7 @@ class RouteActionsController extends Controller
         if (Schema::hasColumn('routes', 'sort_order')) {
             $routesQuery->orderBy('sort_order');
         }
-        $routes = $routesQuery->orderBy('route_code')->get();
+        $routes = $routesQuery->orderByCodeNatural()->get();
 
         $leafletTemplates = AdTemplate::where('template_type', 'leaflet')
             ->where('is_active', 1)
@@ -142,7 +142,7 @@ class RouteActionsController extends Controller
         if (Schema::hasColumn('routes', 'sort_order')) {
             $routesQuery->orderBy('sort_order');
         }
-        $routes = $routesQuery->orderBy('route_code')->get();
+        $routes = $routesQuery->orderByCodeNatural()->get();
 
         $selectedIds = $routeAction->templates->pluck('template_id')->toArray();
 

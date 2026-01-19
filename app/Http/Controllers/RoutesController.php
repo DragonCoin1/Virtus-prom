@@ -32,7 +32,7 @@ class RoutesController extends Controller
             $q->orderBy('sort_order');
         }
 
-        $routes = $q->orderBy('route_code')->paginate(30)->appends($request->query());
+        $routes = $q->orderByCodeNatural()->paginate(30)->appends($request->query());
 
         return view('routes.index', compact('routes'));
     }
