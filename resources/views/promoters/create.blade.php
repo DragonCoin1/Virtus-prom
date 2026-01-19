@@ -25,6 +25,11 @@
                 <input class="form-control" name="promoter_phone" placeholder="9001112233" value="{{ old('promoter_phone') }}">
             </div>
 
+            <div class="col-md-6">
+                <label class="form-label">Реквизиты</label>
+                <input class="form-control" name="promoter_requisites" value="{{ old('promoter_requisites') }}">
+            </div>
+
             <div class="col-md-4">
                 <label class="form-label">Статус</label>
                 <select class="form-select" name="promoter_status" required>

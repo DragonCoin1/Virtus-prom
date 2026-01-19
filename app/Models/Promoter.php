@@ -12,6 +12,7 @@ class Promoter extends Model
     protected $fillable = [
         'promoter_full_name',
         'promoter_phone',
+        'promoter_requisites',
         'promoter_status',
         'hired_at',
         'fired_at',
