@@ -28,7 +28,11 @@ class RoutesController extends Controller
             $q->where('route_type', $request->input('type'));
         }
 
-        $routes = $q->orderBy('sort_order')->orderBy('route_code')->paginate(30)->appends($request->query());
+        if (schema_has_column('routes', 'sort_order')) {
+            $q->orderBy('sort_order');
+        }
+
+        $routes = $q->orderBy('route_code')->paginate(30)->appends($request->query());
 
         return view('routes.index', compact('routes'));
     }
