@@ -29,10 +29,16 @@
 
             <div class="col-md-4">
                 <label class="form-label">Промоутер</label>
-                <select class="form-select" name="promoter_id" required>
+                <input class="form-control mb-2" type="text" placeholder="Поиск промоутера" id="promoterSearch">
+                <select class="form-select" name="promoter_id" id="promoterSelect" required>
                     <option value="">— выбрать —</option>
                     @foreach($promoters as $p)
-                        <option value="{{ $p->promoter_id }}" @selected(old('promoter_id', $routeAction->promoter_id)==$p->promoter_id)>
+                        @php
+                            $promoterLabel = trim($p->promoter_full_name . ($p->promoter_phone ? ' (' . $p->promoter_phone . ')' : ''));
+                        @endphp
+                        <option value="{{ $p->promoter_id }}"
+                                data-search="{{ mb_strtolower($promoterLabel) }}"
+                                @selected(old('promoter_id', $routeAction->promoter_id)==$p->promoter_id)>
                             {{ $p->promoter_full_name }}{{ $p->promoter_phone ? ' (' . $p->promoter_phone . ')' : '' }}
                         </option>
                     @endforeach
@@ -221,6 +227,28 @@
 (function () {
     const searchInput = document.getElementById('routeSearch');
     const select = document.getElementById('routeSelect');
+    if (!searchInput || !select) return;
+
+    const options = Array.from(select.options);
+    const filterOptions = () => {
+        const needle = searchInput.value.trim().toLowerCase();
+        options.forEach(option => {
+            if (!option.value) {
+                option.hidden = false;
+                return;
+            }
+            const hay = option.getAttribute('data-search') || option.textContent.toLowerCase();
+            option.hidden = needle.length > 0 && !hay.includes(needle);
+        });
+    };
+
+    searchInput.addEventListener('input', filterOptions);
+})();
+</script>
+<script>
+(function () {
+    const searchInput = document.getElementById('promoterSearch');
+    const select = document.getElementById('promoterSelect');
     if (!searchInput || !select) return;
 
     const options = Array.from(select.options);
