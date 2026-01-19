@@ -15,7 +15,7 @@ class RouteActionsController extends Controller
     public function index(Request $request)
     {
         $promoters = Promoter::orderBy('promoter_full_name')->get();
-        $routes = Route::orderBy('route_code')->get();
+        $routes = Route::orderBy('sort_order')->orderBy('route_code')->get();
 
         $q = RouteAction::query()->with(['promoter', 'route', 'createdBy', 'templates']);
 
@@ -72,7 +72,7 @@ class RouteActionsController extends Controller
     public function create()
     {
         $promoters = Promoter::orderBy('promoter_full_name')->get();
-        $routes = Route::orderBy('route_code')->get();
+        $routes = Route::orderBy('sort_order')->orderBy('route_code')->get();
 
         $leafletTemplates = AdTemplate::where('template_type', 'leaflet')
             ->where('is_active', 1)
@@ -129,7 +129,7 @@ class RouteActionsController extends Controller
         $routeAction->load(['templates']);
 
         $promoters = Promoter::orderBy('promoter_full_name')->get();
-        $routes = Route::orderBy('route_code')->get();
+        $routes = Route::orderBy('sort_order')->orderBy('route_code')->get();
 
         $selectedIds = $routeAction->templates->pluck('template_id')->toArray();
 

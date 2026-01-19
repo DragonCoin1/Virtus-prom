@@ -29,6 +29,7 @@ class ModuleController extends Controller
             ])
             ->orderByRaw('ra.last_action_date IS NULL DESC')
             ->orderBy('ra.last_action_date', 'asc')
+            ->orderBy('r.sort_order', 'asc')
             ->orderBy('r.route_code', 'asc');
 
         $routes = $q->paginate(80)->withQueryString();

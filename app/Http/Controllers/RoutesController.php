@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Route;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class RoutesController extends Controller
@@ -27,7 +28,7 @@ class RoutesController extends Controller
             $q->where('route_type', $request->input('type'));
         }
 
-        $routes = $q->orderBy('route_code')->paginate(30)->appends($request->query());
+        $routes = $q->orderBy('sort_order')->orderBy('route_code')->paginate(30)->appends($request->query());
 
         return view('routes.index', compact('routes'));
     }
@@ -52,6 +53,10 @@ class RoutesController extends Controller
 
         if (schema_has_column('routes', 'is_active')) {
             $payload['is_active'] = 1;
+        }
+
+        if (schema_has_column('routes', 'sort_order')) {
+            $payload['sort_order'] = (int) Route::max('sort_order') + 1;
         }
 
         Route::create($payload);
@@ -115,45 +120,49 @@ class RoutesController extends Controller
 
         $columns = Schema::getColumnListing('routes');
         $imported = 0;
+        $sortOrder = 1;
 
-        while (($row = fgetcsv($handle, 0, ';')) !== false) {
-            if (count($row) === 1 && trim((string) $row[0]) === '') {
-                continue;
+        DB::transaction(function () use ($handle, $columns, $map, &$imported, &$sortOrder) {
+            $this->clearRoutesData();
+
+            while (($row = fgetcsv($handle, 0, ';')) !== false) {
+                if (count($row) === 1 && trim((string) $row[0]) === '') {
+                    continue;
+                }
+
+                $row = array_map(fn($v) => trim((string) $v), $row);
+
+                $code = $row[$map['route_code']] ?? '';
+                if ($code === '') {
+                    continue;
+                }
+
+                $district = $map['route_district'] ?? null;
+                $type = $map['route_type'] ?? null;
+                $boxes = $map['boxes_count'] ?? null;
+                $entrances = $map['entrances_count'] ?? null;
+                $active = $map['is_active'] ?? null;
+                $comment = $map['route_comment'] ?? null;
+
+                $payload = [
+                    'route_code' => $code,
+                    'route_district' => $district !== null ? ($row[$district] ?? null) : null,
+                    'route_type' => $this->normalizeRouteType($type !== null ? ($row[$type] ?? null) : null),
+                    'boxes_count' => $boxes !== null ? $this->normalizeInteger($row[$boxes] ?? null) : 0,
+                    'entrances_count' => $entrances !== null ? $this->normalizeInteger($row[$entrances] ?? null) : 0,
+                    'is_active' => $active !== null ? $this->normalizeBoolean($row[$active] ?? null) : 1,
+                    'route_comment' => $comment !== null ? ($row[$comment] ?? null) : null,
+                    'sort_order' => $sortOrder,
+                ];
+
+                $payload = array_intersect_key($payload, array_flip($columns));
+
+                Route::create($payload);
+
+                $imported++;
+                $sortOrder++;
             }
-
-            $row = array_map(fn($v) => trim((string) $v), $row);
-
-            $code = $row[$map['route_code']] ?? '';
-            if ($code === '') {
-                continue;
-            }
-
-            $district = $map['route_district'] ?? null;
-            $type = $map['route_type'] ?? null;
-            $boxes = $map['boxes_count'] ?? null;
-            $entrances = $map['entrances_count'] ?? null;
-            $active = $map['is_active'] ?? null;
-            $comment = $map['route_comment'] ?? null;
-
-            $payload = [
-                'route_code' => $code,
-                'route_district' => $district !== null ? ($row[$district] ?? null) : null,
-                'route_type' => $this->normalizeRouteType($type !== null ? ($row[$type] ?? null) : null),
-                'boxes_count' => $boxes !== null ? $this->normalizeInteger($row[$boxes] ?? null) : 0,
-                'entrances_count' => $entrances !== null ? $this->normalizeInteger($row[$entrances] ?? null) : 0,
-                'is_active' => $active !== null ? $this->normalizeBoolean($row[$active] ?? null) : 1,
-                'route_comment' => $comment !== null ? ($row[$comment] ?? null) : null,
-            ];
-
-            $payload = array_intersect_key($payload, array_flip($columns));
-
-            Route::updateOrCreate(
-                ['route_code' => $payload['route_code']],
-                $payload
-            );
-
-            $imported++;
-        }
+        });
 
         fclose($handle);
 
@@ -205,6 +214,21 @@ class RoutesController extends Controller
         }
 
         return in_array($value, ['1', 'true', 'yes', 'да'], true) ? 1 : 0;
+    }
+
+    private function clearRoutesData(): void
+    {
+        if (Schema::hasTable('route_action_templates')) {
+            DB::table('route_action_templates')->delete();
+        }
+
+        if (Schema::hasTable('route_actions')) {
+            DB::table('route_actions')->delete();
+        }
+
+        if (Schema::hasTable('routes')) {
+            DB::table('routes')->delete();
+        }
     }
 }
 

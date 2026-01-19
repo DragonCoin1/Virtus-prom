@@ -17,5 +17,6 @@ class Route extends Model
         'boxes_count',
         'entrances_count',
         'route_comment',
+        'sort_order',
     ];
 }
