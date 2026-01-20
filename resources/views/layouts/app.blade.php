@@ -50,7 +50,9 @@
     </header>
 
     <main class="vp-main">
-        @yield('content')
+        <div class="vp-page">
+            @yield('content')
+        </div>
     </main>
 </div>
 

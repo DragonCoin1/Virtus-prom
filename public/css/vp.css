@@ -1,7 +1,8 @@
 :root{
     --vp-primary: #0d6efd;
-    --vp-bg: #f6f8fc;
-    --vp-card-border: rgba(13, 110, 253, .18);
+    --vp-bg: #eef0f7;
+    --vp-card-border: rgba(99, 102, 241, .18);
+    --vp-surface: #ffffff;
     --vp-text: #0f172a;
     --vp-muted: #64748b;
 }
@@ -22,11 +23,12 @@ body.vp-body{
 }
 
 .vp-header{
-    background: #fff;
+    background: var(--vp-surface);
     border-bottom: 1px solid rgba(15, 23, 42, .08);
     position: sticky;
     top: 0;
     z-index: 10;
+    box-shadow: 0 6px 18px rgba(30, 41, 59, .06);
 }
 
 .vp-header-inner{
@@ -95,7 +97,14 @@ body.vp-body{
 
 /* main */
 .vp-main{
-    padding: 22px 24px 32px;
+    padding: 24px;
+}
+
+.vp-page{
+    background: var(--vp-surface);
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 14px 32px rgba(30, 41, 59, .08);
 }
 
 /* filters */
@@ -164,8 +173,8 @@ body.vp-body{
 /* cards */
 .card{
     border-radius: 16px;
-    border: 1px solid var(--vp-card-border);
-    box-shadow: 0 6px 22px rgba(15, 23, 42, .06);
+    border: 1px solid rgba(148, 163, 184, .28);
+    box-shadow: 0 10px 28px rgba(30, 41, 59, .08);
 }
 
 .card .card-header,
