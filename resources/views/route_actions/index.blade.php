@@ -16,6 +16,8 @@
     $dateTo = request('date_to');
     $promoterId = request('promoter_id');
     $routeId = request('route_id');
+    $promoterSelected = $promoters->firstWhere('promoter_id', $promoterId);
+    $routeSelected = $routes->firstWhere('route_id', $routeId);
 @endphp
 
 <div class="vp-filter mb-3">
@@ -31,28 +33,28 @@
 
             <div class="vp-filter-group">
                 <input type="text" class="form-control form-control-sm vp-filter-search"
-                       placeholder="Промоутер" data-filter-target="promoterSelect">
-                <select class="form-select form-select-sm vp-filter-select" name="promoter_id" id="promoterSelect">
-                    <option value="">Промоутер</option>
+                       placeholder="Промоутер" list="promotersList"
+                       value="{{ $promoterSelected?->promoter_full_name }}"
+                       data-searchable-select data-hidden-target="promoterId">
+                <input type="hidden" name="promoter_id" id="promoterId" value="{{ $promoterId }}">
+                <datalist id="promotersList">
                     @foreach($promoters as $p)
-                        <option value="{{ $p->promoter_id }}" @selected((string)$promoterId === (string)$p->promoter_id)>
-                            {{ $p->promoter_full_name }}
-                        </option>
+                        <option value="{{ $p->promoter_full_name }}" data-id="{{ $p->promoter_id }}"></option>
                     @endforeach
-                </select>
+                </datalist>
             </div>
 
             <div class="vp-filter-group">
                 <input type="text" class="form-control form-control-sm vp-filter-search"
-                       placeholder="Маршрут" data-filter-target="routeSelect">
-                <select class="form-select form-select-sm vp-filter-select" name="route_id" id="routeSelect">
-                    <option value="">Маршрут</option>
+                       placeholder="Маршрут" list="routesList"
+                       value="{{ $routeSelected?->route_code }}"
+                       data-searchable-select data-hidden-target="routeId">
+                <input type="hidden" name="route_id" id="routeId" value="{{ $routeId }}">
+                <datalist id="routesList">
                     @foreach($routes as $r)
-                        <option value="{{ $r->route_id }}" @selected((string)$routeId === (string)$r->route_id)>
-                            {{ $r->route_code }}
-                        </option>
+                        <option value="{{ $r->route_code }}" data-id="{{ $r->route_id }}"></option>
                     @endforeach
-                </select>
+                </datalist>
             </div>
 
             <div class="vp-filter-group">
@@ -178,33 +180,30 @@
 
 @push('scripts')
 <script>
-    document.querySelectorAll('[data-filter-target]').forEach((input) => {
-        const targetId = input.getAttribute('data-filter-target');
-        const select = document.getElementById(targetId);
-        if (!select) {
+    document.querySelectorAll('[data-searchable-select]').forEach((input) => {
+        const targetId = input.getAttribute('data-hidden-target');
+        const hiddenInput = document.getElementById(targetId);
+        const listId = input.getAttribute('list');
+        const dataList = listId ? document.getElementById(listId) : null;
+        if (!hiddenInput || !dataList) {
             return;
         }
 
-        const options = Array.from(select.options);
-        options.forEach((option) => {
-            option.dataset.label = option.textContent.toLowerCase();
-        });
+        const options = Array.from(dataList.options);
+
+        const syncHidden = () => {
+            const value = input.value.trim().toLowerCase();
+            const match = options.find((option) => option.value.toLowerCase() === value);
+            hiddenInput.value = match ? match.dataset.id : '';
+        };
 
         let timer;
-        input.addEventListener('input', (event) => {
-            const value = event.target.value.trim().toLowerCase();
+        input.addEventListener('input', () => {
             clearTimeout(timer);
-            timer = setTimeout(() => {
-                options.forEach((option, index) => {
-                    if (index === 0) {
-                        option.hidden = false;
-                        return;
-                    }
-
-                    option.hidden = value.length > 0 && !option.dataset.label.includes(value);
-                });
-            }, 200);
+            timer = setTimeout(syncHidden, 200);
         });
+
+        input.addEventListener('change', syncHidden);
     });
 </script>
 @endpush

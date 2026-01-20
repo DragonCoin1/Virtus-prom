@@ -1,5 +1,5 @@
 :root{
-    --vp-primary: #0d6efd;
+    --vp-primary: #14b8a6;
     --vp-bg: #eef0f7;
     --vp-card-border: rgba(99, 102, 241, .18);
     --vp-surface: #ffffff;
@@ -39,7 +39,7 @@ body.vp-body{
     flex-wrap: wrap;
     gap: 16px;
     align-items: center;
-    padding: 18px 24px;
+    padding: 22px 28px;
 }
 
 .vp-brand-inline{
@@ -83,15 +83,15 @@ body.vp-body{
 }
 
 .vp-nav-link:hover{
-    background: rgba(13, 110, 253, .06);
-    border-color: rgba(13, 110, 253, .14);
-    color: #0b3b9a;
+    background: rgba(20, 184, 166, .10);
+    border-color: rgba(20, 184, 166, .22);
+    color: #0f766e;
 }
 
 .vp-nav-link.active{
-    background: rgba(13, 110, 253, .10);
-    border-color: rgba(13, 110, 253, .24);
-    color: #0b3b9a;
+    background: rgba(20, 184, 166, .14);
+    border-color: rgba(20, 184, 166, .28);
+    color: #0f766e;
     font-weight: 600;
 }
 
@@ -135,6 +135,7 @@ body.vp-body{
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-left: auto;
 }
 
 .vp-filter-input{
@@ -319,8 +320,8 @@ body.vp-body{
 
 .form-control:focus,
 .form-select:focus{
-    border-color: rgba(13, 110, 253, .50);
-    box-shadow: 0 0 0 .22rem rgba(13, 110, 253, .12);
+    border-color: rgba(20, 184, 166, .55);
+    box-shadow: 0 0 0 .22rem rgba(20, 184, 166, .16);
 }
 
 /* buttons */
@@ -329,7 +330,27 @@ body.vp-body{
 }
 
 .btn-primary{
-    box-shadow: 0 8px 20px rgba(13, 110, 253, .18);
+    background-color: var(--vp-primary);
+    border-color: var(--vp-primary);
+    box-shadow: 0 8px 20px rgba(20, 184, 166, .24);
+}
+
+.btn-primary:hover,
+.btn-primary:focus{
+    background-color: #0f766e;
+    border-color: #0f766e;
+}
+
+.btn-outline-primary{
+    color: var(--vp-primary);
+    border-color: var(--vp-primary);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus{
+    background-color: var(--vp-primary);
+    border-color: var(--vp-primary);
+    color: #fff;
 }
 
 /* status dots */
