@@ -30,7 +30,9 @@
             </div>
 
             <div class="vp-filter-group">
-                <select class="form-select form-select-sm vp-filter-select" name="promoter_id">
+                <input type="text" class="form-control form-control-sm vp-filter-search"
+                       placeholder="Промоутер" data-filter-target="promoterSelect">
+                <select class="form-select form-select-sm vp-filter-select" name="promoter_id" id="promoterSelect">
                     <option value="">Промоутер</option>
                     @foreach($promoters as $p)
                         <option value="{{ $p->promoter_id }}" @selected((string)$promoterId === (string)$p->promoter_id)>
@@ -41,7 +43,9 @@
             </div>
 
             <div class="vp-filter-group">
-                <select class="form-select form-select-sm vp-filter-select" name="route_id">
+                <input type="text" class="form-control form-control-sm vp-filter-search"
+                       placeholder="Маршрут" data-filter-target="routeSelect">
+                <select class="form-select form-select-sm vp-filter-select" name="route_id" id="routeSelect">
                     <option value="">Маршрут</option>
                     @foreach($routes as $r)
                         <option value="{{ $r->route_id }}" @selected((string)$routeId === (string)$r->route_id)>
@@ -171,3 +175,36 @@
     {{ $actions->links() }}
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.querySelectorAll('[data-filter-target]').forEach((input) => {
+        const targetId = input.getAttribute('data-filter-target');
+        const select = document.getElementById(targetId);
+        if (!select) {
+            return;
+        }
+
+        const options = Array.from(select.options);
+        options.forEach((option) => {
+            option.dataset.label = option.textContent.toLowerCase();
+        });
+
+        let timer;
+        input.addEventListener('input', (event) => {
+            const value = event.target.value.trim().toLowerCase();
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                options.forEach((option, index) => {
+                    if (index === 0) {
+                        option.hidden = false;
+                        return;
+                    }
+
+                    option.hidden = value.length > 0 && !option.dataset.label.includes(value);
+                });
+            }, 200);
+        });
+    });
+</script>
+@endpush

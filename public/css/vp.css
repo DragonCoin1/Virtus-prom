@@ -5,6 +5,9 @@
     --vp-surface: #ffffff;
     --vp-text: #0f172a;
     --vp-muted: #64748b;
+    --vp-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --vp-fast: 160ms;
+    --vp-medium: 220ms;
 }
 
 html, body{
@@ -36,7 +39,7 @@ body.vp-body{
     flex-wrap: wrap;
     gap: 16px;
     align-items: center;
-    padding: 14px 20px;
+    padding: 18px 24px;
 }
 
 .vp-brand-inline{
@@ -70,12 +73,13 @@ body.vp-body{
 
 .vp-nav-link{
     display: block;
-    padding: 8px 14px;
+    padding: 10px 16px;
     border-radius: 12px;
     text-decoration: none;
     color: #1f2937;
     border: 1px solid transparent;
-    transition: background .12s ease, border-color .12s ease, color .12s ease;
+    transition: background var(--vp-fast) var(--vp-ease), border-color var(--vp-fast) var(--vp-ease),
+        color var(--vp-fast) var(--vp-ease), transform var(--vp-fast) var(--vp-ease);
 }
 
 .vp-nav-link:hover{
@@ -98,6 +102,48 @@ body.vp-body{
 /* main */
 .vp-main{
     padding: 24px;
+}
+
+.vp-toolbar{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.vp-toolbar-actions{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.vp-btn{
+    min-height: 34px;
+}
+
+.vp-filter-compact{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.vp-filter-actions{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vp-filter-input{
+    max-width: 420px;
+    min-width: 240px;
+}
+
+.vp-filter-status{
+    min-width: 200px;
 }
 
 .vp-page{
@@ -152,6 +198,10 @@ body.vp-body{
     min-width: 180px;
 }
 
+.vp-filter-search{
+    width: 160px;
+}
+
 .vp-filter-add{
     width: 36px;
     height: 36px;
@@ -175,6 +225,55 @@ body.vp-body{
     border-radius: 16px;
     border: 1px solid rgba(148, 163, 184, .28);
     box-shadow: 0 10px 28px rgba(30, 41, 59, .08);
+}
+
+.btn,
+.form-control,
+.form-select,
+.dropdown-menu,
+.modal,
+.toast,
+.tooltip{
+    transition: all var(--vp-fast) var(--vp-ease);
+}
+
+.btn:hover{
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(30, 41, 59, .12);
+}
+
+.dropdown-menu{
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity var(--vp-medium) var(--vp-ease), transform var(--vp-medium) var(--vp-ease);
+}
+
+.dropdown-menu.show{
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.modal.fade .modal-dialog{
+    transform: translateY(-8px);
+    transition: transform var(--vp-medium) var(--vp-ease);
+}
+
+.modal.show .modal-dialog{
+    transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce){
+    *{
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .btn:hover{
+        transform: none;
+        box-shadow: none;
+    }
 }
 
 .card .card-header,

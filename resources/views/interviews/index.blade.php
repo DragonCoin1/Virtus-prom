@@ -17,9 +17,9 @@
     ];
 @endphp
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="vp-toolbar mb-3">
     <h3 class="m-0">Собеседования</h3>
-    <a class="btn btn-primary btn-sm" href="{{ route('interviews.create') }}">+ Добавить</a>
+    <a class="btn btn-primary btn-sm vp-btn" href="{{ route('interviews.create') }}">+ Добавить</a>
 </div>
 
 @if(session('ok'))
@@ -31,17 +31,17 @@
         <form class="row g-2 align-items-end" method="GET" action="{{ route('interviews.index') }}">
             <div class="col-md-2">
                 <label class="form-label">Дата с</label>
-                <input type="date" class="form-control" name="date_from" value="{{ $dateFrom }}">
+                <input type="date" class="form-control form-control-sm" name="date_from" value="{{ $dateFrom }}">
             </div>
 
             <div class="col-md-2">
                 <label class="form-label">Дата по</label>
-                <input type="date" class="form-control" name="date_to" value="{{ $dateTo }}">
+                <input type="date" class="form-control form-control-sm" name="date_to" value="{{ $dateTo }}">
             </div>
 
             <div class="col-md-3">
                 <label class="form-label">Статус</label>
-                <select class="form-select" name="status">
+                <select class="form-select form-select-sm" name="status">
                     <option value="">— все —</option>
                     <option value="planned" @selected($status==='planned')>Запланировано</option>
                     <option value="came" @selected($status==='came')>Пришёл</option>
@@ -53,12 +53,12 @@
 
             <div class="col-md-3">
                 <label class="form-label">Поиск</label>
-                <input class="form-control" name="search" value="{{ $search }}" placeholder="ФИО / телефон / источник">
+                <input class="form-control form-control-sm" name="search" value="{{ $search }}" placeholder="ФИО / телефон / источник">
             </div>
 
             <div class="col-md-2 d-flex gap-2">
-                <button class="btn btn-primary w-100">Показать</button>
-                <a class="btn btn-outline-secondary w-100" href="{{ route('interviews.index') }}">Сброс</a>
+                <button class="btn btn-primary btn-sm vp-btn w-100">Показать</button>
+                <a class="btn btn-outline-secondary btn-sm vp-btn w-100" href="{{ route('interviews.index') }}">Сброс</a>
             </div>
         </form>
     </div>

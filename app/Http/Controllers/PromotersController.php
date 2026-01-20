@@ -14,8 +14,9 @@ class PromotersController extends Controller
         $q = Promoter::query();
 
         // Поиск (ФИО + телефон)
-        if ($request->filled('search')) {
-            $s = trim($request->input('search'));
+        $search = $request->input('search', $request->input('q'));
+        if (!empty($search)) {
+            $s = trim((string) $search);
             $q->where(function ($qq) use ($s) {
                 $qq->where('promoter_full_name', 'like', '%' . $s . '%')
                    ->orWhere('promoter_phone', 'like', '%' . $s . '%');
@@ -27,9 +28,16 @@ class PromotersController extends Controller
             $q->where('promoter_status', $request->input('status'));
         }
 
-        $promoters = $q->orderBy('promoter_full_name')
-            ->paginate(30)
-            ->appends($request->query());
+        $sort = $request->input('sort');
+        $dir = $request->input('dir') === 'desc' ? 'desc' : 'asc';
+
+        if ($sort === 'full_name') {
+            $q->orderBy('promoter_full_name', $dir);
+        } else {
+            $q->orderBy('promoter_full_name');
+        }
+
+        $promoters = $q->paginate(30)->appends($request->query());
 
         return view('promoters.index', compact('promoters'));
     }
