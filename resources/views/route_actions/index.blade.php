@@ -2,13 +2,6 @@
 @section('title', 'Разноска')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h3 class="m-0">Разноска</h3>
-    @if(!empty($canEdit))
-        <a class="btn btn-primary btn-sm" href="{{ route('route_actions.create') }}">+ Добавить</a>
-    @endif
-</div>
-
 @if(session('ok'))
     <div class="alert alert-success">{{ session('ok') }}</div>
 @endif
@@ -23,54 +16,60 @@
     $dateTo = request('date_to');
     $promoterId = request('promoter_id');
     $routeId = request('route_id');
+    $promoterSelected = $promoters->firstWhere('promoter_id', $promoterId);
+    $routeSelected = $routes->firstWhere('route_id', $routeId);
 @endphp
 
-<div class="card mb-3">
-    <div class="card-body">
-        <form method="GET" action="{{ route('module.route_actions') }}" class="row g-2 align-items-end">
-            <div class="col-md-2">
-                <label class="form-label">Дата с</label>
-                <input type="date" class="form-control" name="date_from" value="{{ $dateFrom }}">
+<div class="vp-filter mb-3">
+    <form method="GET" action="{{ route('module.route_actions') }}" class="vp-filter-form">
+        <div class="vp-filter-fields">
+            <div class="vp-filter-group">
+                <span class="vp-filter-label">Дата</span>
+                <span class="vp-filter-inline">с</span>
+                <input type="date" class="form-control form-control-sm vp-filter-date" name="date_from" value="{{ $dateFrom }}">
+                <span class="vp-filter-inline">по</span>
+                <input type="date" class="form-control form-control-sm vp-filter-date" name="date_to" value="{{ $dateTo }}">
             </div>
 
-            <div class="col-md-2">
-                <label class="form-label">Дата по</label>
-                <input type="date" class="form-control" name="date_to" value="{{ $dateTo }}">
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Промоутер</label>
-                <select class="form-select" name="promoter_id">
-                    <option value="">— все —</option>
+            <div class="vp-filter-group">
+                <input type="text" class="form-control form-control-sm vp-filter-search"
+                       placeholder="Промоутер" list="promotersList"
+                       value="{{ $promoterSelected?->promoter_full_name }}"
+                       data-searchable-select data-hidden-target="promoterId">
+                <input type="hidden" name="promoter_id" id="promoterId" value="{{ $promoterId }}">
+                <datalist id="promotersList">
                     @foreach($promoters as $p)
-                        <option value="{{ $p->promoter_id }}" @selected((string)$promoterId === (string)$p->promoter_id)>
-                            {{ $p->promoter_full_name }}
-                        </option>
+                        <option value="{{ $p->promoter_full_name }}" data-id="{{ $p->promoter_id }}"></option>
                     @endforeach
-                </select>
+                </datalist>
             </div>
 
-            <div class="col-md-3">
-                <label class="form-label">Маршрут</label>
-                <select class="form-select" name="route_id">
-                    <option value="">— все —</option>
+            <div class="vp-filter-group">
+                <input type="text" class="form-control form-control-sm vp-filter-search"
+                       placeholder="Маршрут" list="routesList"
+                       value="{{ $routeSelected?->route_code }}"
+                       data-searchable-select data-hidden-target="routeId">
+                <input type="hidden" name="route_id" id="routeId" value="{{ $routeId }}">
+                <datalist id="routesList">
                     @foreach($routes as $r)
-                        <option value="{{ $r->route_id }}" @selected((string)$routeId === (string)$r->route_id)>
-                            {{ $r->route_code }}
-                        </option>
+                        <option value="{{ $r->route_code }}" data-id="{{ $r->route_id }}"></option>
                     @endforeach
-                </select>
+                </datalist>
             </div>
 
-            <div class="col-md-2 d-flex gap-2">
-                <button class="btn btn-primary w-100">Показать</button>
-                <a class="btn btn-outline-secondary w-100" href="{{ route('module.route_actions') }}">Сброс</a>
+            <div class="vp-filter-group">
+                <button class="btn btn-primary btn-sm">Показать</button>
+                <a class="btn btn-outline-secondary btn-sm" href="{{ route('module.route_actions') }}">Сброс</a>
             </div>
-        </form>
-    </div>
+        </div>
+
+        @if(!empty($canEdit))
+            <a class="btn btn-primary btn-sm vp-filter-add" href="{{ route('route_actions.create') }}" aria-label="Добавить запись">+</a>
+        @endif
+    </form>
 
     @if(!empty($hasFilters))
-        <div class="card-footer d-flex justify-content-between align-items-center">
+        <div class="vp-filter-summary">
             <div class="text-muted">
                 Итого оплата: <strong>{{ (int)($sumPayment ?? 0) }}</strong>
             </div>
@@ -178,3 +177,33 @@
     {{ $actions->links() }}
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.querySelectorAll('[data-searchable-select]').forEach((input) => {
+        const targetId = input.getAttribute('data-hidden-target');
+        const hiddenInput = document.getElementById(targetId);
+        const listId = input.getAttribute('list');
+        const dataList = listId ? document.getElementById(listId) : null;
+        if (!hiddenInput || !dataList) {
+            return;
+        }
+
+        const options = Array.from(dataList.options);
+
+        const syncHidden = () => {
+            const value = input.value.trim().toLowerCase();
+            const match = options.find((option) => option.value.toLowerCase() === value);
+            hiddenInput.value = match ? match.dataset.id : '';
+        };
+
+        let timer;
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(syncHidden, 200);
+        });
+
+        input.addEventListener('change', syncHidden);
+    });
+</script>
+@endpush

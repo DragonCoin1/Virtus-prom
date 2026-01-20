@@ -11,30 +11,7 @@ class RoutesController extends Controller
 {
     public function index(Request $request)
     {
-        $q = Route::query();
-
-        if ($request->filled('search')) {
-            $s = trim($request->input('search'));
-            $q->where(function ($qq) use ($s) {
-                $qq->where('route_code', 'like', '%' . $s . '%');
-
-                if (schema_has_column('routes', 'route_area')) {
-                    $qq->orWhere('route_area', 'like', '%' . $s . '%');
-                }
-            });
-        }
-
-        if ($request->filled('type')) {
-            $q->where('route_type', $request->input('type'));
-        }
-
-        if (schema_has_column('routes', 'sort_order')) {
-            $q->orderBy('sort_order');
-        }
-
-        $routes = $q->orderByCodeNatural()->paginate(30)->appends($request->query());
-
-        return view('routes.index', compact('routes'));
+        return redirect()->route('module.cards');
     }
 
     public function create()
@@ -65,7 +42,7 @@ class RoutesController extends Controller
 
         Route::create($payload);
 
-        return redirect()->route('routes.index')->with('ok', 'Маршрут добавлен');
+        return redirect()->route('module.cards')->with('ok', 'Маршрут добавлен');
     }
 
     public function edit(Route $route)
@@ -88,7 +65,7 @@ class RoutesController extends Controller
 
         $route->update($payload);
 
-        return redirect()->route('routes.index')->with('ok', 'Маршрут обновлён');
+        return redirect()->route('module.cards')->with('ok', 'Маршрут обновлён');
     }
 
     public function importForm()

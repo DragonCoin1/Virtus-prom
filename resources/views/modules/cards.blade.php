@@ -10,12 +10,12 @@
     ];
 @endphp
 
-<div class="d-flex align-items-center justify-content-between mb-3">
+<div class="vp-toolbar mb-3">
     <h3 class="mb-0">Карты</h3>
-    <div class="d-flex gap-2">
-        <a href="{{ route('routes.create') }}" class="btn btn-sm btn-outline-primary">+ Маршрут</a>
-        <a href="{{ route('routes.import.form') }}" class="btn btn-sm btn-primary">Импорт</a>
-        <a class="btn btn-outline-primary btn-sm" href="{{ route('ad_templates.index') }}">Макеты</a>
+    <div class="vp-toolbar-actions">
+        <a href="{{ route('routes.create') }}" class="btn btn-sm btn-outline-primary vp-btn">+ Маршрут</a>
+        <a href="{{ route('routes.import.form') }}" class="btn btn-sm btn-primary vp-btn">Импорт</a>
+        <a class="btn btn-outline-primary btn-sm vp-btn" href="{{ route('ad_templates.index') }}">Макеты</a>
     </div>
 </div>
 
