@@ -98,6 +98,69 @@ body.vp-body{
     padding: 22px 24px 32px;
 }
 
+/* filters */
+.vp-filter{
+    background: transparent;
+}
+
+.vp-filter-form{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.vp-filter-fields{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.vp-filter-group{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vp-filter-label{
+    font-size: 13px;
+    color: var(--vp-muted);
+    font-weight: 500;
+}
+
+.vp-filter-inline{
+    font-size: 12px;
+    color: var(--vp-muted);
+}
+
+.vp-filter-date{
+    width: 140px;
+}
+
+.vp-filter-select{
+    min-width: 180px;
+}
+
+.vp-filter-add{
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 18px;
+}
+
+.vp-filter-summary{
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
 /* cards */
 .card{
     border-radius: 16px;
