@@ -8,14 +8,24 @@
         'paused' => 'Пауза',
         'fired' => 'Уволен',
     ];
+
+    $sort = request('sort');
+    $dir = request('dir');
+    $isSorted = $sort === 'full_name';
+    $currentDir = $isSorted ? $dir : null;
+    $nextDir = $currentDir === 'asc' ? 'desc' : ($currentDir === 'desc' ? null : 'asc');
+    $baseParams = request()->except(['sort', 'dir', 'page']);
+    $sortParams = $nextDir ? array_merge($baseParams, ['sort' => 'full_name', 'dir' => $nextDir]) : $baseParams;
+    $sortUrl = route('module.promoters', $sortParams);
+    $sortIcon = $currentDir === 'asc' ? '▲' : ($currentDir === 'desc' ? '▼' : '');
 @endphp
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="vp-toolbar mb-3">
     <h3 class="m-0">Промоутеры</h3>
-    <div class="d-flex gap-2">
-        <a class="btn btn-primary btn-sm" href="{{ route('promoters.create') }}">+ Добавить</a>
-        <a class="btn btn-outline-primary btn-sm" href="{{ route('promoters.import.form') }}">Импорт</a>
+    <div class="vp-toolbar-actions">
+        <a class="btn btn-primary btn-sm vp-btn" href="{{ route('promoters.create') }}">Добавить</a>
+        <a class="btn btn-outline-primary btn-sm vp-btn" href="{{ route('promoters.import.form') }}">Импорт</a>
     </div>
 </div>
 
@@ -23,12 +33,11 @@
     <div class="alert alert-success">{{ session('ok') }}</div>
 @endif
 
-<form class="row g-2 mb-3" method="GET" action="{{ route('module.promoters') }}">
-    <div class="col-md-6">
-        <input class="form-control" name="q" placeholder="Поиск: имя или телефон" value="{{ request('q') }}">
-    </div>
-    <div class="col-md-4">
-        <select class="form-select" name="status">
+<form class="vp-filter vp-filter-compact mb-3" method="GET" action="{{ route('module.promoters') }}">
+    <div class="vp-filter-fields">
+        <input class="form-control form-control-sm vp-filter-input" name="search"
+               placeholder="Поиск: имя или телефон" value="{{ request('search') }}">
+        <select class="form-select form-select-sm vp-filter-status" name="status">
             <option value="">Статус: все</option>
             <option value="active" @selected(request('status')==='active')>Активен</option>
             <option value="trainee" @selected(request('status')==='trainee')>Стажёр</option>
@@ -36,10 +45,14 @@
             <option value="fired" @selected(request('status')==='fired')>Уволен</option>
         </select>
     </div>
-    <div class="col-md-2 d-flex gap-2">
-        <button class="btn btn-outline-primary w-100">Фильтр</button>
-        <a class="btn btn-outline-secondary w-100" href="{{ route('module.promoters') }}">Сброс</a>
+    <div class="vp-filter-actions">
+        <button class="btn btn-outline-primary btn-sm vp-btn">Фильтр</button>
+        <a class="btn btn-outline-secondary btn-sm vp-btn" href="{{ route('module.promoters') }}">Сброс</a>
     </div>
+    @if($isSorted)
+        <input type="hidden" name="sort" value="{{ $sort }}">
+        <input type="hidden" name="dir" value="{{ $dir }}">
+    @endif
 </form>
 
 <div class="card">
@@ -47,7 +60,11 @@
         <table class="table table-striped table-hover mb-0">
             <thead>
             <tr>
-                <th>ФИО</th>
+                <th>
+                    <a class="text-decoration-none text-reset" href="{{ $sortUrl }}">
+                        ФИО {!! $sortIcon ? '<span class="ms-1 text-muted">' . $sortIcon . '</span>' : '' !!}
+                    </a>
+                </th>
                 <th>Телефон</th>
                 <th>Реквизиты</th>
                 <th>Статус</th>
