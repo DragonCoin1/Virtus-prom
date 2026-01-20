@@ -15,11 +15,10 @@
 </head>
 <body class="vp-body">
 
-<div class="container-fluid vp-shell">
-    <div class="row min-vh-100">
-
-        <aside class="col-12 col-md-3 col-lg-2 p-0 vp-sidebar d-flex flex-column">
-            <div class="vp-brand">
+<div class="vp-shell">
+    <header class="vp-header">
+        <div class="container-fluid vp-header-inner">
+            <div class="vp-brand-inline">
                 <div class="vp-brand-title">Virtus Prom</div>
                 <div class="vp-brand-sub">
                     @if(auth()->check())
@@ -28,7 +27,7 @@
                 </div>
             </div>
 
-            <nav class="vp-nav">
+            <nav class="vp-nav vp-nav-horizontal">
                 <a class="vp-nav-link {{ request()->routeIs('module.promoters') ? 'active' : '' }}" href="{{ route('module.promoters') }}">Промоутеры</a>
 
                 <a class="vp-nav-link {{ request()->routeIs('module.route_actions') || request()->routeIs('route_actions.*') ? 'active' : '' }}"
@@ -43,19 +42,16 @@
                 <a class="vp-nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.index') }}">Отчёты</a>
             </nav>
 
-            <div class="vp-sidebar-footer mt-auto">
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="btn btn-outline-secondary w-100">Выйти</button>
-                </form>
-            </div>
-        </aside>
+            <form method="POST" action="{{ route('logout') }}" class="vp-logout">
+                @csrf
+                <button class="btn btn-outline-secondary">Выйти</button>
+            </form>
+        </div>
+    </header>
 
-        <main class="col-12 col-md-9 col-lg-10 vp-main">
-            @yield('content')
-        </main>
-
-    </div>
+    <main class="vp-main">
+        @yield('content')
+    </main>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
