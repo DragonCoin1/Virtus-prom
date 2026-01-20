@@ -21,14 +21,26 @@ body.vp-body{
     min-height: 100vh;
 }
 
-.vp-sidebar{
+.vp-header{
     background: #fff;
-    border-right: 1px solid rgba(15, 23, 42, .08);
+    border-bottom: 1px solid rgba(15, 23, 42, .08);
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
-.vp-brand{
-    padding: 18px 18px 14px 18px;
-    border-bottom: 1px solid rgba(15, 23, 42, .08);
+.vp-header-inner{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 20px;
+}
+
+.vp-brand-inline{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .vp-brand-title{
@@ -44,15 +56,19 @@ body.vp-body{
 
 /* nav */
 .vp-nav{
-    padding: 12px;
+    padding: 0;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    gap: 8px;
+}
+
+.vp-nav-horizontal{
+    flex: 1 1 auto;
+    flex-wrap: wrap;
 }
 
 .vp-nav-link{
     display: block;
-    padding: 10px 12px;
+    padding: 8px 14px;
     border-radius: 12px;
     text-decoration: none;
     color: #1f2937;
@@ -73,14 +89,13 @@ body.vp-body{
     font-weight: 600;
 }
 
-.vp-sidebar-footer{
-    padding: 14px 12px;
-    border-top: 1px solid rgba(15, 23, 42, .08);
+.vp-logout{
+    flex-shrink: 0;
 }
 
 /* main */
 .vp-main{
-    padding: 22px;
+    padding: 22px 24px 32px;
 }
 
 /* cards */

@@ -56,9 +56,9 @@ Route::middleware('auth')->group(function () {
         ->name('promoters.destroy');
 
     // ROUTES
-    Route::get('/routes', [RoutesController::class, 'index'])
-        ->middleware('module:routes,view')
-        ->name('routes.index');
+    Route::get('/routes', function () {
+        return redirect()->route('module.cards');
+    })->middleware('module:routes,view');
 
     Route::get('/routes/create', [RoutesController::class, 'create'])
         ->middleware('module:routes,edit')
