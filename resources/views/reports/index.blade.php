@@ -69,32 +69,36 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <form class="row g-2 align-items-end" method="GET" action="{{ route('reports.index') }}">
-            <div class="col-md-3">
-                <label class="form-label">Дата с</label>
-                <input type="date" class="form-control form-control-sm" name="date_from" value="{{ $dateFrom }}">
+        <form class="vp-filter vp-filter-compact vp-filter-stack" method="GET" action="{{ route('reports.index') }}">
+            <div class="vp-filter-fields">
+                <div class="row g-2 w-100">
+                    <div class="col-md-3">
+                        <label class="form-label">Дата с</label>
+                        <input type="date" class="form-control form-control-sm" name="date_from" value="{{ $dateFrom }}">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Дата по</label>
+                        <input type="date" class="form-control form-control-sm" name="date_to" value="{{ $dateTo }}">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Сортировка</label>
+                        <select class="form-select form-select-sm" name="sort">
+                            <option value="desc" @selected($sort==='desc')>Новые → старые</option>
+                            <option value="asc" @selected($sort==='asc')>Старые → новые</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-12 text-muted" style="font-size: 12px;">
+                        Сейчас: {{ $dateFrom }} — {{ $dateTo }} • {{ $sortLabel }}
+                    </div>
+                </div>
             </div>
 
-            <div class="col-md-3">
-                <label class="form-label">Дата по</label>
-                <input type="date" class="form-control form-control-sm" name="date_to" value="{{ $dateTo }}">
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Сортировка</label>
-                <select class="form-select form-select-sm" name="sort">
-                    <option value="desc" @selected($sort==='desc')>Новые → старые</option>
-                    <option value="asc" @selected($sort==='asc')>Старые → новые</option>
-                </select>
-            </div>
-
-            <div class="col-md-3 d-flex gap-2">
-                <button class="btn btn-primary btn-sm vp-btn w-100">Показать</button>
-                <a class="btn btn-outline-secondary btn-sm vp-btn w-100" href="{{ route('reports.index') }}">Сброс</a>
-            </div>
-
-            <div class="col-md-12 text-muted" style="font-size: 12px;">
-                Сейчас: {{ $dateFrom }} — {{ $dateTo }} • {{ $sortLabel }}
+            <div class="vp-filter-actions">
+                <button class="btn btn-outline-primary btn-sm vp-btn">Показать</button>
+                <a class="btn btn-outline-secondary btn-sm vp-btn" href="{{ route('reports.index') }}">Сброс</a>
             </div>
         </form>
     </div>
