@@ -1,5 +1,5 @@
 :root{
-    --vp-primary: #14b8a6;
+    --vp-primary: #2563eb;
     --vp-bg: #eef0f7;
     --vp-card-border: rgba(99, 102, 241, .18);
     --vp-surface: #ffffff;
@@ -83,15 +83,15 @@ body.vp-body{
 }
 
 .vp-nav-link:hover{
-    background: rgba(20, 184, 166, .10);
-    border-color: rgba(20, 184, 166, .22);
-    color: #0f766e;
+    background: rgba(37, 99, 235, .10);
+    border-color: rgba(37, 99, 235, .22);
+    color: #1d4ed8;
 }
 
 .vp-nav-link.active{
-    background: rgba(20, 184, 166, .14);
-    border-color: rgba(20, 184, 166, .28);
-    color: #0f766e;
+    background: rgba(37, 99, 235, .14);
+    border-color: rgba(37, 99, 235, .28);
+    color: #1d4ed8;
     font-weight: 600;
 }
 
@@ -131,6 +131,20 @@ body.vp-body{
     flex-wrap: wrap;
 }
 
+.vp-filter-compact.vp-filter-stack{
+    align-items: flex-start;
+}
+
+.vp-filter-compact.vp-filter-stack .vp-filter-fields{
+    flex: 1 1 100%;
+}
+
+.vp-filter-compact.vp-filter-stack .vp-filter-actions{
+    margin-left: 0;
+    width: 100%;
+    gap: 6px;
+}
+
 .vp-filter-actions{
     display: flex;
     align-items: center;
@@ -145,6 +159,11 @@ body.vp-body{
 
 .vp-filter-status{
     min-width: 200px;
+}
+
+.vp-filter-status-short{
+    min-width: 200px;
+    max-width: 280px;
 }
 
 .vp-filter-status-compact{
@@ -324,8 +343,8 @@ body.vp-body{
 
 .form-control:focus,
 .form-select:focus{
-    border-color: rgba(20, 184, 166, .55);
-    box-shadow: 0 0 0 .22rem rgba(20, 184, 166, .16);
+    border-color: rgba(37, 99, 235, .55);
+    box-shadow: 0 0 0 .22rem rgba(37, 99, 235, .16);
 }
 
 /* buttons */
@@ -336,13 +355,13 @@ body.vp-body{
 .btn-primary{
     background-color: var(--vp-primary);
     border-color: var(--vp-primary);
-    box-shadow: 0 8px 20px rgba(20, 184, 166, .24);
+    box-shadow: 0 8px 20px rgba(37, 99, 235, .24);
 }
 
 .btn-primary:hover,
 .btn-primary:focus{
-    background-color: #0f766e;
-    border-color: #0f766e;
+    background-color: #1d4ed8;
+    border-color: #1d4ed8;
 }
 
 .btn-outline-primary{
