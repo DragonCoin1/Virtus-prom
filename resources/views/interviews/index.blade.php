@@ -48,12 +48,12 @@
                         </select>
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-md-auto">
                         <label class="form-label">Дата с</label>
                         <input type="date" class="form-control form-control-sm vp-filter-date" name="date_from" value="{{ $dateFrom }}">
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-md-auto">
                         <label class="form-label">Дата по</label>
                         <input type="date" class="form-control form-control-sm vp-filter-date" name="date_to" value="{{ $dateTo }}">
                     </div>

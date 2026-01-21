@@ -33,17 +33,17 @@
         <form class="vp-filter vp-filter-compact vp-filter-stack" method="GET" action="{{ route('salary.index') }}">
             <div class="vp-filter-fields">
                 <div class="row g-2 w-100">
-                    <div class="col-md-2">
+                    <div class="col-md-auto">
                         <label class="form-label">Дата с</label>
-                        <input type="date" class="form-control form-control-sm vp-filter-date-half" name="date_from" value="{{ $dateFrom }}">
+                        <input type="date" class="form-control form-control-sm vp-filter-date" name="date_from" value="{{ $dateFrom }}">
                     </div>
 
-                    <div class="col-md-2">
+                    <div class="col-md-auto">
                         <label class="form-label">Дата по</label>
-                        <input type="date" class="form-control form-control-sm vp-filter-date-half" name="date_to" value="{{ $dateTo }}">
+                        <input type="date" class="form-control form-control-sm vp-filter-date" name="date_to" value="{{ $dateTo }}">
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label">Промоутер</label>
                         <input type="text" class="form-control form-control-sm" list="salaryPromotersList"
                                value="{{ $promoterSelected?->promoter_full_name }}"
@@ -60,8 +60,8 @@
             </div>
 
             <div class="vp-filter-actions">
-                <button class="btn btn-outline-primary btn-sm vp-btn">Показать</button>
-                <a class="btn btn-outline-secondary btn-sm vp-btn" href="{{ route('salary.index') }}">Сброс</a>
+                <button class="btn btn-outline-primary vp-btn">Показать</button>
+                <a class="btn btn-outline-secondary vp-btn" href="{{ route('salary.index') }}">Сброс</a>
             </div>
         </form>
     </div>
@@ -112,7 +112,7 @@
 
 <div class="card">
     <div class="card-header">
-        Последние корректировки
+        Последни корректировки
     </div>
 
     <div class="table-responsive">
