@@ -16,6 +16,7 @@
     $dateTo = request('date_to');
     $promoterId = request('promoter_id');
     $routeId = request('route_id');
+    $status = request('status');
     $promoterSelected = $promoters->firstWhere('promoter_id', $promoterId);
     $routeSelected = $routes->firstWhere('route_id', $routeId);
 @endphp
@@ -42,6 +43,16 @@
                         <option value="{{ $p->promoter_full_name }}" data-id="{{ $p->promoter_id }}"></option>
                     @endforeach
                 </datalist>
+            </div>
+
+            <div class="vp-filter-group">
+                <select class="form-select form-select-sm vp-filter-status vp-filter-status-compact" name="status">
+                    <option value="">Статус: все</option>
+                    <option value="active" @selected($status==='active')>Активен</option>
+                    <option value="trainee" @selected($status==='trainee')>Стажёр</option>
+                    <option value="paused" @selected($status==='paused')>Пауза</option>
+                    <option value="fired" @selected($status==='fired')>Уволен</option>
+                </select>
             </div>
 
             <div class="vp-filter-group">
