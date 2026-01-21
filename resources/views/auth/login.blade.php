@@ -35,7 +35,7 @@
             </form>
 
             <div class="text-muted small mt-3">
-                Тестовые аккаунты: owner / owner12345, manager / manager12345
+                Тестовые аккаунты: developer / developer12345, manager / manager12345
             </div>
         </div>
     </div>
