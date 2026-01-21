@@ -47,8 +47,17 @@ class FullTestSeeder extends Seeder
         if (!Schema::hasTable('roles') || !Schema::hasTable('users')) return;
 
         // roles: без created_at/updated_at (их нет)
-        $ownerRoleId = DB::table('roles')->insertGetId(['role_name' => 'Owner'], 'role_id');
-        $managerRoleId = DB::table('roles')->insertGetId(['role_name' => 'Manager'], 'role_id');
+        $roleIds = [];
+        foreach ([
+            'developer',
+            'general_director',
+            'regional_director',
+            'branch_director',
+            'manager',
+            'promoter',
+        ] as $roleName) {
+            $roleIds[$roleName] = DB::table('roles')->insertGetId(['role_name' => $roleName], 'role_id');
+        }
 
         // role_module_access
         if (Schema::hasTable('role_module_access')) {
@@ -63,7 +72,14 @@ class FullTestSeeder extends Seeder
 
             $rows = [];
             if ($moduleField) {
-                foreach ([$ownerRoleId, $managerRoleId] as $rid) {
+                $fullAccessRoles = [
+                    $roleIds['developer'],
+                    $roleIds['general_director'],
+                    $roleIds['regional_director'],
+                    $roleIds['branch_director'],
+                ];
+
+                foreach ($fullAccessRoles as $rid) {
                     foreach ($modules as $m) {
                         $row = [];
 
@@ -82,32 +98,66 @@ class FullTestSeeder extends Seeder
                     }
                 }
 
+                foreach ($modules as $m) {
+                    $row = [];
+
+                    if (in_array('role_id', $cols, true)) $row['role_id'] = $roleIds['manager'];
+                    $row[$moduleField] = $m;
+
+                    if (in_array('can_view', $cols, true)) $row['can_view'] = 1;
+                    if (in_array('can_add', $cols, true)) $row['can_add'] = 1;
+                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = $m === 'salary' ? 0 : 1;
+                    if (in_array('can_delete', $cols, true)) $row['can_delete'] = 1;
+
+                    if (in_array('created_at', $cols, true)) $row['created_at'] = now();
+                    if (in_array('updated_at', $cols, true)) $row['updated_at'] = now();
+
+                    $rows[] = $row;
+                }
+
+                foreach (['salary', 'route_actions'] as $m) {
+                    $row = [];
+
+                    if (in_array('role_id', $cols, true)) $row['role_id'] = $roleIds['promoter'];
+                    $row[$moduleField] = $m;
+
+                    if (in_array('can_view', $cols, true)) $row['can_view'] = 1;
+                    if (in_array('can_add', $cols, true)) $row['can_add'] = 0;
+                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = 0;
+                    if (in_array('can_delete', $cols, true)) $row['can_delete'] = 0;
+
+                    if (in_array('created_at', $cols, true)) $row['created_at'] = now();
+                    if (in_array('updated_at', $cols, true)) $row['updated_at'] = now();
+
+                    $rows[] = $row;
+                }
+
                 DB::table('role_module_access')->insert($rows);
             }
         }
 
-        // users: owner/manager как на форме логина
+        // users: developer/manager как на форме логина
         $userCols = $this->tableColumns('users');
 
-        $ownerRow = [];
-        if (in_array('user_login', $userCols, true)) $ownerRow['user_login'] = 'owner';
-        if (in_array('user_full_name', $userCols, true)) $ownerRow['user_full_name'] = 'Owner';
-        if (in_array('role_id', $userCols, true)) $ownerRow['role_id'] = $ownerRoleId;
-        if (in_array('user_password_hash', $userCols, true)) $ownerRow['user_password_hash'] = Hash::make('owner12345');
-        if (in_array('password', $userCols, true)) $ownerRow['password'] = Hash::make('owner12345');
-        if (in_array('created_at', $userCols, true)) $ownerRow['created_at'] = now();
-        if (in_array('updated_at', $userCols, true)) $ownerRow['updated_at'] = now();
+        $developerRow = [];
+        if (in_array('user_login', $userCols, true)) $developerRow['user_login'] = 'developer';
+        if (in_array('user_full_name', $userCols, true)) $developerRow['user_full_name'] = 'Developer';
+        if (in_array('role_id', $userCols, true)) $developerRow['role_id'] = $roleIds['developer'];
+        if (in_array('user_password_hash', $userCols, true)) $developerRow['user_password_hash'] = Hash::make('developer12345');
+        if (in_array('password', $userCols, true)) $developerRow['password'] = Hash::make('developer12345');
+        if (in_array('created_at', $userCols, true)) $developerRow['created_at'] = now();
+        if (in_array('updated_at', $userCols, true)) $developerRow['updated_at'] = now();
 
         $managerRow = [];
         if (in_array('user_login', $userCols, true)) $managerRow['user_login'] = 'manager';
         if (in_array('user_full_name', $userCols, true)) $managerRow['user_full_name'] = 'Manager';
-        if (in_array('role_id', $userCols, true)) $managerRow['role_id'] = $managerRoleId;
+        if (in_array('role_id', $userCols, true)) $managerRow['role_id'] = $roleIds['manager'];
         if (in_array('user_password_hash', $userCols, true)) $managerRow['user_password_hash'] = Hash::make('manager12345');
         if (in_array('password', $userCols, true)) $managerRow['password'] = Hash::make('manager12345');
         if (in_array('created_at', $userCols, true)) $managerRow['created_at'] = now();
         if (in_array('updated_at', $userCols, true)) $managerRow['updated_at'] = now();
 
-        DB::table('users')->insert([$ownerRow, $managerRow]);
+        DB::table('users')->insert([$developerRow, $managerRow]);
     }
 
     private function seedPromoters(): void
