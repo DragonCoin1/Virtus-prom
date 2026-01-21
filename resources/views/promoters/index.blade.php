@@ -33,7 +33,7 @@
     <div class="alert alert-success">{{ session('ok') }}</div>
 @endif
 
-<form class="vp-filter vp-filter-compact mb-3" method="GET" action="{{ route('module.promoters') }}">
+<form class="vp-filter vp-filter-compact vp-filter-stack mb-3" method="GET" action="{{ route('module.promoters') }}">
     <div class="vp-filter-fields">
         <input class="form-control form-control-sm vp-filter-input" name="search"
                placeholder="Поиск: имя или телефон" value="{{ request('search') }}">
