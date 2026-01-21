@@ -30,34 +30,38 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <form class="row g-2 align-items-end" method="GET" action="{{ route('salary.index') }}">
-            <div class="col-md-2">
-                <label class="form-label">Дата с</label>
-                <input type="date" class="form-control form-control-sm" name="date_from" value="{{ $dateFrom }}">
+        <form class="vp-filter vp-filter-compact vp-filter-stack" method="GET" action="{{ route('salary.index') }}">
+            <div class="vp-filter-fields">
+                <div class="row g-2 w-100">
+                    <div class="col-md-2">
+                        <label class="form-label">Дата с</label>
+                        <input type="date" class="form-control form-control-sm vp-filter-date-half" name="date_from" value="{{ $dateFrom }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Дата по</label>
+                        <input type="date" class="form-control form-control-sm vp-filter-date-half" name="date_to" value="{{ $dateTo }}">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Промоутер</label>
+                        <input type="text" class="form-control form-control-sm" list="salaryPromotersList"
+                               value="{{ $promoterSelected?->promoter_full_name }}"
+                               placeholder="Начните вводить ФИО"
+                               data-searchable-select data-hidden-target="salaryPromoterId">
+                        <input type="hidden" name="promoter_id" id="salaryPromoterId" value="{{ $promoterId }}">
+                        <datalist id="salaryPromotersList">
+                            @foreach($promoters as $p)
+                                <option value="{{ $p->promoter_full_name }}" data-id="{{ $p->promoter_id }}"></option>
+                            @endforeach
+                        </datalist>
+                    </div>
+                </div>
             </div>
 
-            <div class="col-md-2">
-                <label class="form-label">Дата по</label>
-                <input type="date" class="form-control form-control-sm" name="date_to" value="{{ $dateTo }}">
-            </div>
-
-            <div class="col-md-4">
-                <label class="form-label">Промоутер</label>
-                <input type="text" class="form-control form-control-sm" list="salaryPromotersList"
-                       value="{{ $promoterSelected?->promoter_full_name }}"
-                       placeholder="Начните вводить ФИО"
-                       data-searchable-select data-hidden-target="salaryPromoterId">
-                <input type="hidden" name="promoter_id" id="salaryPromoterId" value="{{ $promoterId }}">
-                <datalist id="salaryPromotersList">
-                    @foreach($promoters as $p)
-                        <option value="{{ $p->promoter_full_name }}" data-id="{{ $p->promoter_id }}"></option>
-                    @endforeach
-                </datalist>
-            </div>
-
-            <div class="col-md-4 d-flex gap-2">
-                <button class="btn btn-primary btn-sm vp-btn w-100">Показать</button>
-                <a class="btn btn-outline-secondary btn-sm vp-btn w-100" href="{{ route('salary.index') }}">Сброс</a>
+            <div class="vp-filter-actions">
+                <button class="btn btn-outline-primary btn-sm vp-btn">Показать</button>
+                <a class="btn btn-outline-secondary btn-sm vp-btn" href="{{ route('salary.index') }}">Сброс</a>
             </div>
         </form>
     </div>

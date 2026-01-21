@@ -19,32 +19,36 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <form class="row g-2 align-items-end" method="GET" action="{{ route('ad_templates.index') }}">
-            <div class="col-md-3">
-                <label class="form-label">Поиск</label>
-                <input class="form-control" name="search" value="{{ $search }}">
+        <form class="vp-filter vp-filter-compact vp-filter-stack" method="GET" action="{{ route('ad_templates.index') }}">
+            <div class="vp-filter-fields">
+                <div class="row g-2 w-100">
+                    <div class="col-md-3">
+                        <label class="form-label">Поиск</label>
+                        <input class="form-control" name="search" value="{{ $search }}">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Тип</label>
+                        <select class="form-select" name="type">
+                            <option value="">— все —</option>
+                            <option value="leaflet" @selected($type==='leaflet')>Листовка</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Статус</label>
+                        <select class="form-select" name="status">
+                            <option value="">— все —</option>
+                            <option value="active" @selected($status==='active')>Активен</option>
+                            <option value="inactive" @selected($status==='inactive')>Выключен</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <div class="col-md-3">
-                <label class="form-label">Тип</label>
-                <select class="form-select" name="type">
-                    <option value="">— все —</option>
-                    <option value="leaflet" @selected($type==='leaflet')>Листовка</option>
-                </select>
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Статус</label>
-                <select class="form-select" name="status">
-                    <option value="">— все —</option>
-                    <option value="active" @selected($status==='active')>Активен</option>
-                    <option value="inactive" @selected($status==='inactive')>Выключен</option>
-                </select>
-            </div>
-
-            <div class="col-md-3 d-flex gap-2">
-                <button class="btn btn-primary w-100">Показать</button>
-                <a class="btn btn-outline-secondary w-100" href="{{ route('ad_templates.index') }}">Сброс</a>
+            <div class="vp-filter-actions">
+                <button class="btn btn-outline-primary btn-sm vp-btn">Показать</button>
+                <a class="btn btn-outline-secondary btn-sm vp-btn" href="{{ route('ad_templates.index') }}">Сброс</a>
             </div>
         </form>
     </div>
