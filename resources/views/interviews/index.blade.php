@@ -50,12 +50,12 @@
 
                     <div class="col-md-2">
                         <label class="form-label">Дата с</label>
-                        <input type="date" class="form-control form-control-sm vp-filter-date-half" name="date_from" value="{{ $dateFrom }}">
+                        <input type="date" class="form-control form-control-sm vp-filter-date" name="date_from" value="{{ $dateFrom }}">
                     </div>
 
                     <div class="col-md-2">
                         <label class="form-label">Дата по</label>
-                        <input type="date" class="form-control form-control-sm vp-filter-date-half" name="date_to" value="{{ $dateTo }}">
+                        <input type="date" class="form-control form-control-sm vp-filter-date" name="date_to" value="{{ $dateTo }}">
                     </div>
                 </div>
             </div>
