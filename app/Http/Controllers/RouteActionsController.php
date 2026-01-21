@@ -41,6 +41,14 @@ class RouteActionsController extends Controller
             $hasFilters = true;
         }
 
+        if ($request->filled('status')) {
+            $status = $request->input('status');
+            $q->whereHas('promoter', function ($query) use ($status) {
+                $query->where('promoter_status', $status);
+            });
+            $hasFilters = true;
+        }
+
         if ($request->filled('route_id')) {
             $q->where('route_id', (int)$request->input('route_id'));
             $hasFilters = true;

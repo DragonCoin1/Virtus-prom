@@ -147,6 +147,10 @@ body.vp-body{
     min-width: 200px;
 }
 
+.vp-filter-status-compact{
+    min-width: 150px;
+}
+
 .vp-page{
     background: var(--vp-surface);
     border-radius: 20px;
