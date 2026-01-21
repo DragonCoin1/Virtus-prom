@@ -112,7 +112,7 @@
 
 <div class="card">
     <div class="card-header">
-        Последние корректировки
+        Последни корректировки
     </div>
 
     <div class="table-responsive">
