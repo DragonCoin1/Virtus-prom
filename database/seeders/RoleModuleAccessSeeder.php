@@ -12,7 +12,6 @@ class RoleModuleAccessSeeder extends Seeder
         $roles = DB::table('roles')->pluck('role_id', 'role_name');
 
         $modules = [
-            'dashboard',
             'promoters',
             'routes',
             'route_actions',
@@ -21,36 +20,50 @@ class RoleModuleAccessSeeder extends Seeder
             'salary',
             'keys_registry',
             'reports',
+            'ad_templates',
         ];
 
-        // owner: всё view+edit
-        foreach ($modules as $m) {
-            DB::table('role_module_access')->insert([
-                'role_id' => $roles['owner'],
-                'module_code' => $m,
-                'can_view' => 1,
-                'can_edit' => 1,
-            ]);
+        $fullAccessRoles = [
+            'developer',
+            'general_director',
+            'regional_director',
+            'branch_director',
+        ];
+
+        foreach ($fullAccessRoles as $roleName) {
+            if (!isset($roles[$roleName])) {
+                continue;
+            }
+            foreach ($modules as $m) {
+                DB::table('role_module_access')->insert([
+                    'role_id' => $roles[$roleName],
+                    'module_code' => $m,
+                    'can_view' => 1,
+                    'can_edit' => 1,
+                ]);
+            }
         }
 
-        // manager: почти всё (без каких-то админских можно потом урезать)
-        foreach ($modules as $m) {
-            DB::table('role_module_access')->insert([
-                'role_id' => $roles['manager'],
-                'module_code' => $m,
-                'can_view' => 1,
-                'can_edit' => ($m === 'reports') ? 0 : 1,
-            ]);
+        if (isset($roles['manager'])) {
+            foreach ($modules as $m) {
+                DB::table('role_module_access')->insert([
+                    'role_id' => $roles['manager'],
+                    'module_code' => $m,
+                    'can_view' => 1,
+                    'can_edit' => $m === 'salary' ? 0 : 1,
+                ]);
+            }
         }
 
-        // promoter: только dashboard + salary + route_actions (условно)
-        foreach (['dashboard', 'salary', 'route_actions'] as $m) {
-            DB::table('role_module_access')->insert([
-                'role_id' => $roles['promoter'],
-                'module_code' => $m,
-                'can_view' => 1,
-                'can_edit' => 0,
-            ]);
+        if (isset($roles['promoter'])) {
+            foreach (['salary', 'route_actions'] as $m) {
+                DB::table('role_module_access')->insert([
+                    'role_id' => $roles['promoter'],
+                    'module_code' => $m,
+                    'can_view' => 1,
+                    'can_edit' => 0,
+                ]);
+            }
         }
     }
 }
