@@ -22,7 +22,7 @@
 @endphp
 
 <div class="vp-filter mb-3">
-    <form method="GET" action="{{ route('module.route_actions') }}" class="vp-filter-form">
+    <form method="GET" action="{{ route('module.route_actions') }}" class="vp-filter-form vp-filter-stack">
         <div class="vp-filter-fields">
             <div class="vp-filter-group">
                 <span class="vp-filter-label">Дата</span>
@@ -68,10 +68,11 @@
                 </datalist>
             </div>
 
-            <div class="vp-filter-group">
-                <button class="btn btn-primary btn-sm">Показать</button>
-                <a class="btn btn-outline-secondary btn-sm" href="{{ route('module.route_actions') }}">Сброс</a>
-            </div>
+        </div>
+
+        <div class="vp-filter-actions">
+            <button class="btn btn-outline-primary btn-sm vp-btn">Показать</button>
+            <a class="btn btn-outline-secondary btn-sm vp-btn" href="{{ route('module.route_actions') }}">Сброс</a>
         </div>
 
         @if(!empty($canEdit))

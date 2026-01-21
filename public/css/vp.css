@@ -190,6 +190,20 @@ body.vp-body{
     flex-wrap: wrap;
 }
 
+.vp-filter-form.vp-filter-stack{
+    align-items: flex-start;
+}
+
+.vp-filter-form.vp-filter-stack .vp-filter-fields{
+    flex: 1 1 100%;
+}
+
+.vp-filter-form.vp-filter-stack .vp-filter-actions{
+    margin-left: 0;
+    width: 100%;
+    gap: 6px;
+}
+
 .vp-filter-fields{
     display: flex;
     align-items: center;
