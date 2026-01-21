@@ -39,7 +39,7 @@
                 <input type="date" class="form-control form-control-sm" name="date_to" value="{{ $dateTo }}">
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Статус</label>
                 <select class="form-select form-select-sm" name="status">
                     <option value="">— все —</option>
@@ -51,7 +51,7 @@
                 </select>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2 ms-auto">
                 <label class="form-label">Поиск</label>
                 <input class="form-control form-control-sm" name="search" value="{{ $search }}" placeholder="ФИО / телефон / источник">
             </div>
