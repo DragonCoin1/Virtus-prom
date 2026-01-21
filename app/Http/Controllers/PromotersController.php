@@ -58,6 +58,11 @@ class PromotersController extends Controller
             'csv_file' => ['required', 'file'],
         ]);
 
+        $branchId = null;
+        if (Schema::hasColumn('promoters', 'branch_id') && auth()->check()) {
+            $branchId = auth()->user()->branch_id;
+        }
+
         $file = $request->file('csv_file');
         $handle = fopen($file->getRealPath(), 'r');
         if ($handle === false) {
@@ -122,6 +127,10 @@ class PromotersController extends Controller
                 $payload['fired_at'] ?? null
             );
 
+            if (!empty($branchId) && in_array('branch_id', $columns, true)) {
+                $payload['branch_id'] = $branchId;
+            }
+
             $payload = array_intersect_key($payload, array_flip($columns));
 
             if (!empty($payload['promoter_phone'])) {
@@ -148,6 +157,10 @@ class PromotersController extends Controller
     {
         $data = $this->validatePromoter($request);
         $columns = Schema::getColumnListing('promoters');
+        $branchId = null;
+        if (Schema::hasColumn('promoters', 'branch_id') && auth()->check()) {
+            $branchId = auth()->user()->branch_id;
+        }
 
         // Архитектура статуса: fired_at имеет приоритет
         $data['promoter_status'] = $this->applyStatusRules(
@@ -167,6 +180,10 @@ class PromotersController extends Controller
 
         if (Schema::hasColumn('promoters', 'promoter_requisites')) {
             $payload['promoter_requisites'] = $data['promoter_requisites'] ?? null;
+        }
+
+        if (!empty($branchId) && in_array('branch_id', $columns, true)) {
+            $payload['branch_id'] = $branchId;
         }
 
         $payload = array_intersect_key($payload, array_flip($columns));

@@ -18,6 +18,8 @@ class FullTestSeeder extends Seeder
             'role_module_access',
             'users',
             'roles',
+            'branches',
+            'cities',
             'route_action_templates',
             'route_actions',
             'ad_templates',
@@ -33,6 +35,7 @@ class FullTestSeeder extends Seeder
 
         Schema::enableForeignKeyConstraints();
 
+        $this->seedCitiesAndBranches();
         $this->seedRolesAndUsers();
         $this->seedPromoters();
         $this->call(RoutesSeeder::class);
@@ -158,11 +161,78 @@ class FullTestSeeder extends Seeder
         if (in_array('updated_at', $userCols, true)) $managerRow['updated_at'] = now();
 
         DB::table('users')->insert([$developerRow, $managerRow]);
+
+        if (Schema::hasColumn('users', 'branch_id') && Schema::hasTable('branches')) {
+            $branchId = DB::table('branches')->value('branch_id');
+            if ($branchId) {
+                DB::table('users')
+                    ->where('user_login', 'manager')
+                    ->update(['branch_id' => $branchId]);
+            }
+        }
+
+        if (Schema::hasColumn('users', 'city_id') && Schema::hasTable('cities')) {
+            $cityId = DB::table('cities')->value('city_id');
+            if ($cityId) {
+                DB::table('users')
+                    ->where('user_login', 'manager')
+                    ->update(['city_id' => $cityId]);
+            }
+        }
+    }
+
+    private function seedCitiesAndBranches(): void
+    {
+        if (!Schema::hasTable('cities') || !Schema::hasTable('branches')) return;
+
+        $cityRows = [
+            ['city_name' => 'Новосибирск', 'region_name' => 'Новосибирская область', 'population' => 1625631],
+            ['city_name' => 'Краснодар', 'region_name' => 'Краснодарский край', 'population' => 1035669],
+            ['city_name' => 'Москва', 'region_name' => 'Москва', 'population' => 13010112],
+        ];
+
+        foreach ($cityRows as $row) {
+            DB::table('cities')->insert(array_merge($row, [
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+        }
+
+        $cities = DB::table('cities')->pluck('city_id', 'city_name');
+
+        $branchRows = [
+            [
+                'branch_name' => 'Филиал Новосибирск',
+                'city_id' => $cities['Новосибирск'] ?? $cities->first(),
+            ],
+            [
+                'branch_name' => 'Филиал Краснодар',
+                'city_id' => $cities['Краснодар'] ?? $cities->first(),
+            ],
+            [
+                'branch_name' => 'Филиал Москва',
+                'city_id' => $cities['Москва'] ?? $cities->first(),
+            ],
+        ];
+
+        foreach ($branchRows as $row) {
+            DB::table('branches')->insert(array_merge($row, [
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+        }
     }
 
     private function seedPromoters(): void
     {
         if (!Schema::hasTable('promoters')) return;
+
+        $branchId = null;
+        if (Schema::hasColumn('promoters', 'branch_id') && Schema::hasTable('branches')) {
+            $branchId = DB::table('branches')->value('branch_id');
+        }
 
         $statuses = ['active', 'trainee', 'paused'];
 
@@ -182,6 +252,7 @@ class FullTestSeeder extends Seeder
             }
 
             $rows[] = [
+                'branch_id' => $branchId,
                 'promoter_full_name' => $name,
                 'promoter_phone' => $phone,
                 'promoter_status' => $status,
