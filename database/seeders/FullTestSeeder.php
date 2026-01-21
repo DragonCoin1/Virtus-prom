@@ -15,9 +15,14 @@ class FullTestSeeder extends Seeder
         Schema::disableForeignKeyConstraints();
 
         foreach ([
+            'ad_residuals',
+            'instructions',
+            'promoter_salaries',
             'role_module_access',
             'users',
             'roles',
+            'branches',
+            'cities',
             'route_action_templates',
             'route_actions',
             'ad_templates',
@@ -33,13 +38,17 @@ class FullTestSeeder extends Seeder
 
         Schema::enableForeignKeyConstraints();
 
+        $this->seedCitiesAndBranches();
         $this->seedRolesAndUsers();
         $this->seedPromoters();
         $this->call(RoutesSeeder::class);
         $this->seedTemplates();
+        $this->seedAdResiduals();
         $this->seedRouteActions();
         $this->seedInterviews();
+        $this->seedPromoterSalaries();
         $this->seedSalaryAdjustments();
+        $this->seedInstructions();
     }
 
     private function seedRolesAndUsers(): void
@@ -47,8 +56,17 @@ class FullTestSeeder extends Seeder
         if (!Schema::hasTable('roles') || !Schema::hasTable('users')) return;
 
         // roles: без created_at/updated_at (их нет)
-        $ownerRoleId = DB::table('roles')->insertGetId(['role_name' => 'Owner'], 'role_id');
-        $managerRoleId = DB::table('roles')->insertGetId(['role_name' => 'Manager'], 'role_id');
+        $roleIds = [];
+        foreach ([
+            'developer',
+            'general_director',
+            'regional_director',
+            'branch_director',
+            'manager',
+            'promoter',
+        ] as $roleName) {
+            $roleIds[$roleName] = DB::table('roles')->insertGetId(['role_name' => $roleName], 'role_id');
+        }
 
         // role_module_access
         if (Schema::hasTable('role_module_access')) {
@@ -63,7 +81,14 @@ class FullTestSeeder extends Seeder
 
             $rows = [];
             if ($moduleField) {
-                foreach ([$ownerRoleId, $managerRoleId] as $rid) {
+                $fullAccessRoles = [
+                    $roleIds['developer'],
+                    $roleIds['general_director'],
+                    $roleIds['regional_director'],
+                    $roleIds['branch_director'],
+                ];
+
+                foreach ($fullAccessRoles as $rid) {
                     foreach ($modules as $m) {
                         $row = [];
 
@@ -82,37 +107,138 @@ class FullTestSeeder extends Seeder
                     }
                 }
 
+                foreach ($modules as $m) {
+                    $row = [];
+
+                    if (in_array('role_id', $cols, true)) $row['role_id'] = $roleIds['manager'];
+                    $row[$moduleField] = $m;
+
+                    if (in_array('can_view', $cols, true)) $row['can_view'] = 1;
+                    if (in_array('can_add', $cols, true)) $row['can_add'] = 1;
+                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = $m === 'salary' ? 0 : 1;
+                    if (in_array('can_delete', $cols, true)) $row['can_delete'] = 1;
+
+                    if (in_array('created_at', $cols, true)) $row['created_at'] = now();
+                    if (in_array('updated_at', $cols, true)) $row['updated_at'] = now();
+
+                    $rows[] = $row;
+                }
+
+                foreach (['salary', 'route_actions'] as $m) {
+                    $row = [];
+
+                    if (in_array('role_id', $cols, true)) $row['role_id'] = $roleIds['promoter'];
+                    $row[$moduleField] = $m;
+
+                    if (in_array('can_view', $cols, true)) $row['can_view'] = 1;
+                    if (in_array('can_add', $cols, true)) $row['can_add'] = 0;
+                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = 0;
+                    if (in_array('can_delete', $cols, true)) $row['can_delete'] = 0;
+
+                    if (in_array('created_at', $cols, true)) $row['created_at'] = now();
+                    if (in_array('updated_at', $cols, true)) $row['updated_at'] = now();
+
+                    $rows[] = $row;
+                }
+
                 DB::table('role_module_access')->insert($rows);
             }
         }
 
-        // users: owner/manager как на форме логина
+        // users: developer/manager как на форме логина
         $userCols = $this->tableColumns('users');
 
-        $ownerRow = [];
-        if (in_array('user_login', $userCols, true)) $ownerRow['user_login'] = 'owner';
-        if (in_array('user_full_name', $userCols, true)) $ownerRow['user_full_name'] = 'Owner';
-        if (in_array('role_id', $userCols, true)) $ownerRow['role_id'] = $ownerRoleId;
-        if (in_array('user_password_hash', $userCols, true)) $ownerRow['user_password_hash'] = Hash::make('owner12345');
-        if (in_array('password', $userCols, true)) $ownerRow['password'] = Hash::make('owner12345');
-        if (in_array('created_at', $userCols, true)) $ownerRow['created_at'] = now();
-        if (in_array('updated_at', $userCols, true)) $ownerRow['updated_at'] = now();
+        $developerRow = [];
+        if (in_array('user_login', $userCols, true)) $developerRow['user_login'] = 'developer';
+        if (in_array('user_full_name', $userCols, true)) $developerRow['user_full_name'] = 'Developer';
+        if (in_array('role_id', $userCols, true)) $developerRow['role_id'] = $roleIds['developer'];
+        if (in_array('user_password_hash', $userCols, true)) $developerRow['user_password_hash'] = Hash::make('developer12345');
+        if (in_array('password', $userCols, true)) $developerRow['password'] = Hash::make('developer12345');
+        if (in_array('created_at', $userCols, true)) $developerRow['created_at'] = now();
+        if (in_array('updated_at', $userCols, true)) $developerRow['updated_at'] = now();
 
         $managerRow = [];
         if (in_array('user_login', $userCols, true)) $managerRow['user_login'] = 'manager';
         if (in_array('user_full_name', $userCols, true)) $managerRow['user_full_name'] = 'Manager';
-        if (in_array('role_id', $userCols, true)) $managerRow['role_id'] = $managerRoleId;
+        if (in_array('role_id', $userCols, true)) $managerRow['role_id'] = $roleIds['manager'];
         if (in_array('user_password_hash', $userCols, true)) $managerRow['user_password_hash'] = Hash::make('manager12345');
         if (in_array('password', $userCols, true)) $managerRow['password'] = Hash::make('manager12345');
         if (in_array('created_at', $userCols, true)) $managerRow['created_at'] = now();
         if (in_array('updated_at', $userCols, true)) $managerRow['updated_at'] = now();
 
-        DB::table('users')->insert([$ownerRow, $managerRow]);
+        DB::table('users')->insert([$developerRow, $managerRow]);
+
+        if (Schema::hasColumn('users', 'branch_id') && Schema::hasTable('branches')) {
+            $branchId = DB::table('branches')->value('branch_id');
+            if ($branchId) {
+                DB::table('users')
+                    ->where('user_login', 'manager')
+                    ->update(['branch_id' => $branchId]);
+            }
+        }
+
+        if (Schema::hasColumn('users', 'city_id') && Schema::hasTable('cities')) {
+            $cityId = DB::table('cities')->value('city_id');
+            if ($cityId) {
+                DB::table('users')
+                    ->where('user_login', 'manager')
+                    ->update(['city_id' => $cityId]);
+            }
+        }
+    }
+
+    private function seedCitiesAndBranches(): void
+    {
+        if (!Schema::hasTable('cities') || !Schema::hasTable('branches')) return;
+
+        $cityRows = [
+            ['city_name' => 'Новосибирск', 'region_name' => 'Новосибирская область', 'population' => 1625631],
+            ['city_name' => 'Краснодар', 'region_name' => 'Краснодарский край', 'population' => 1035669],
+            ['city_name' => 'Москва', 'region_name' => 'Москва', 'population' => 13010112],
+        ];
+
+        foreach ($cityRows as $row) {
+            DB::table('cities')->insert(array_merge($row, [
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+        }
+
+        $cities = DB::table('cities')->pluck('city_id', 'city_name');
+
+        $branchRows = [
+            [
+                'branch_name' => 'Филиал Новосибирск',
+                'city_id' => $cities['Новосибирск'] ?? $cities->first(),
+            ],
+            [
+                'branch_name' => 'Филиал Краснодар',
+                'city_id' => $cities['Краснодар'] ?? $cities->first(),
+            ],
+            [
+                'branch_name' => 'Филиал Москва',
+                'city_id' => $cities['Москва'] ?? $cities->first(),
+            ],
+        ];
+
+        foreach ($branchRows as $row) {
+            DB::table('branches')->insert(array_merge($row, [
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+        }
     }
 
     private function seedPromoters(): void
     {
         if (!Schema::hasTable('promoters')) return;
+
+        $branchId = null;
+        if (Schema::hasColumn('promoters', 'branch_id') && Schema::hasTable('branches')) {
+            $branchId = DB::table('branches')->value('branch_id');
+        }
 
         $statuses = ['active', 'trainee', 'paused'];
 
@@ -132,6 +258,7 @@ class FullTestSeeder extends Seeder
             }
 
             $rows[] = [
+                'branch_id' => $branchId,
                 'promoter_full_name' => $name,
                 'promoter_phone' => $phone,
                 'promoter_status' => $status,
@@ -251,6 +378,37 @@ class FullTestSeeder extends Seeder
         }
     }
 
+    private function seedAdResiduals(): void
+    {
+        if (!Schema::hasTable('ad_residuals') || !Schema::hasTable('branches')) return;
+
+        $branchIds = DB::table('branches')->pluck('branch_id')->toArray();
+        if (empty($branchIds)) return;
+
+        $types = ['leaflet', 'card', 'poster', 'other'];
+        $rows = [];
+
+        foreach ($branchIds as $branchId) {
+            $itemsCount = random_int(2, 4);
+            for ($i = 0; $i < $itemsCount; $i++) {
+                $amount = random_int(200, 1200);
+                $remaining = random_int(0, $amount);
+                $rows[] = [
+                    'branch_id' => $branchId,
+                    'ad_type' => $types[array_rand($types)],
+                    'ad_amount' => $amount,
+                    'remaining_amount' => $remaining,
+                    'received_at' => Carbon::now()->subDays(random_int(1, 45))->format('Y-m-d'),
+                    'notes' => (random_int(1, 4) === 1) ? 'тестовые остатки' : null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+        }
+
+        DB::table('ad_residuals')->insert($rows);
+    }
+
     private function seedInterviews(): void
     {
         if (!Schema::hasTable('interviews')) return;
@@ -295,6 +453,34 @@ class FullTestSeeder extends Seeder
         DB::table('interviews')->insert($rows);
     }
 
+    private function seedPromoterSalaries(): void
+    {
+        if (!Schema::hasTable('promoter_salaries') || !Schema::hasTable('promoters')) return;
+
+        $promoters = DB::table('promoters')->pluck('promoter_id')->toArray();
+        if (empty($promoters)) return;
+
+        $userId = null;
+        if (Schema::hasTable('users') && Schema::hasColumn('promoter_salaries', 'created_by')) {
+            $userId = DB::table('users')->value('id');
+        }
+
+        $rows = [];
+        foreach ($promoters as $promoterId) {
+            $rows[] = [
+                'promoter_id' => $promoterId,
+                'amount' => random_int(25000, 60000),
+                'salary_period' => Carbon::now()->startOfMonth()->format('Y-m-d'),
+                'created_by' => $userId,
+                'comment' => (random_int(1, 5) === 1) ? 'тестовая ставка' : null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        DB::table('promoter_salaries')->insert($rows);
+    }
+
     private function seedSalaryAdjustments(): void
     {
         if (!Schema::hasTable('salary_adjustments')) return;
@@ -320,6 +506,37 @@ class FullTestSeeder extends Seeder
         }
 
         DB::table('salary_adjustments')->insert($rows);
+    }
+
+    private function seedInstructions(): void
+    {
+        if (!Schema::hasTable('instructions')) return;
+
+        $creatorId = null;
+        if (Schema::hasTable('users') && Schema::hasColumn('instructions', 'created_by')) {
+            $creatorId = DB::table('users')->value('id');
+        }
+
+        $rows = [
+            [
+                'title' => 'Общие правила',
+                'body' => 'Ведите отчёты ежедневно и обновляйте остатки рекламы.',
+                'created_by' => $creatorId,
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'title' => 'Работа с промоутерами',
+                'body' => 'Назначайте ответственных и фиксируйте изменения по зарплате промоутеров.',
+                'created_by' => $creatorId,
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ];
+
+        DB::table('instructions')->insert($rows);
     }
 
     private function pickSome(array $arr, int $count): array
