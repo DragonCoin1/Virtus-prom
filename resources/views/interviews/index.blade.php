@@ -32,16 +32,6 @@
             <div class="vp-filter-fields">
                 <div class="row g-2 w-100">
                     <div class="col-md-2">
-                        <label class="form-label">Дата с</label>
-                        <input type="date" class="form-control form-control-sm" name="date_from" value="{{ $dateFrom }}">
-                    </div>
-
-                    <div class="col-md-2">
-                        <label class="form-label">Дата по</label>
-                        <input type="date" class="form-control form-control-sm" name="date_to" value="{{ $dateTo }}">
-                    </div>
-
-                    <div class="col-md-2 ms-auto">
                         <label class="form-label">Поиск</label>
                         <input class="form-control form-control-sm" name="search" value="{{ $search }}" placeholder="ФИО / телефон / источник">
                     </div>
@@ -56,6 +46,16 @@
                             <option value="hired" @selected($status==='hired')>Принят</option>
                             <option value="rejected" @selected($status==='rejected')>Отказ</option>
                         </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Дата с</label>
+                        <input type="date" class="form-control form-control-sm vp-filter-date-half" name="date_from" value="{{ $dateFrom }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Дата по</label>
+                        <input type="date" class="form-control form-control-sm vp-filter-date-half" name="date_to" value="{{ $dateTo }}">
                     </div>
                 </div>
             </div>
