@@ -12,27 +12,32 @@ class UsersSeeder extends Seeder
     {
         $roles = DB::table('roles')->pluck('role_id', 'role_name');
 
-        $ownerHash = Hash::make('owner12345');
+        $developerHash = Hash::make('developer12345');
         $managerHash = Hash::make('manager12345');
 
-        $users = [
-            [
-                'role_id' => $roles['owner'],
-                'user_login' => 'owner',
-                'user_password_hash' => $ownerHash,
-                'password' => $ownerHash, // <-- ВАЖНО: стандартное поле Laravel
-                'user_full_name' => 'Owner Admin',
+        $users = [];
+
+        if (isset($roles['developer'])) {
+            $users[] = [
+                'role_id' => $roles['developer'],
+                'user_login' => 'developer',
+                'user_password_hash' => $developerHash,
+                'password' => $developerHash, // <-- ВАЖНО: стандартное поле Laravel
+                'user_full_name' => 'Developer Admin',
                 'user_is_active' => 1,
-            ],
-            [
+            ];
+        }
+
+        if (isset($roles['manager'])) {
+            $users[] = [
                 'role_id' => $roles['manager'],
                 'user_login' => 'manager',
                 'user_password_hash' => $managerHash,
                 'password' => $managerHash, // <-- ВАЖНО
                 'user_full_name' => 'Manager User',
                 'user_is_active' => 1,
-            ],
-        ];
+            ];
+        }
 
         foreach ($users as $user) {
             DB::table('users')->updateOrInsert(
