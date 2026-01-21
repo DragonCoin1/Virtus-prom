@@ -1,167 +1,192 @@
 @extends('layouts.app')
-@section('title', 'Зарплата')
+@section('title', 'Разноска')
 
 @section('content')
-@php
-    $dateFrom = request('date_from');
-    $dateTo = request('date_to');
-    $promoterId = request('promoter_id');
-    $periodLabel = 'всё время';
-    if (!empty($dateFrom) && !empty($dateTo)) {
-        $periodLabel = $dateFrom . ' — ' . $dateTo;
-    } elseif (!empty($dateFrom)) {
-        $periodLabel = 'с ' . $dateFrom;
-    } elseif (!empty($dateTo)) {
-        $periodLabel = 'до ' . $dateTo;
-    }
-    $promoterSelected = $promoters->firstWhere('promoter_id', $promoterId);
-@endphp
-
-<div class="vp-toolbar mb-3">
-    <h3 class="m-0">Зарплата</h3>
-    @if(!empty($canEdit))
-        <a class="btn btn-primary btn-sm vp-btn" href="{{ route('salary.adjustments.create') }}">+ Корректировка</a>
-    @endif
-</div>
-
 @if(session('ok'))
     <div class="alert alert-success">{{ session('ok') }}</div>
 @endif
 
-<div class="card mb-3">
-    <div class="card-body">
-        <form class="vp-filter vp-filter-compact vp-filter-stack" method="GET" action="{{ route('salary.index') }}">
-            <div class="vp-filter-fields">
-                <div class="row g-2 w-100">
-                    <div class="col-md-2">
-                        <label class="form-label">Дата с</label>
-                        <input type="date" class="form-control form-control-sm vp-filter-date-half" name="date_from" value="{{ $dateFrom }}">
-                    </div>
+@php
+    $templatesText = function($templates) {
+        if (!$templates || $templates->count() === 0) return '—';
+        return $templates->pluck('template_name')->implode(', ');
+    };
 
-                    <div class="col-md-2">
-                        <label class="form-label">Дата по</label>
-                        <input type="date" class="form-control form-control-sm vp-filter-date-half" name="date_to" value="{{ $dateTo }}">
-                    </div>
+    $dateFrom = request('date_from');
+    $dateTo = request('date_to');
+    $promoterId = request('promoter_id');
+    $routeId = request('route_id');
+    $status = request('status');
+    $promoterSelected = $promoters->firstWhere('promoter_id', $promoterId);
+    $routeSelected = $routes->firstWhere('route_id', $routeId);
+@endphp
 
-                    <div class="col-md-3">
-                        <label class="form-label">Промоутер</label>
-                        <input type="text" class="form-control form-control-sm" list="salaryPromotersList"
-                               value="{{ $promoterSelected?->promoter_full_name }}"
-                               placeholder="Начните вводить ФИО"
-                               data-searchable-select data-hidden-target="salaryPromoterId">
-                        <input type="hidden" name="promoter_id" id="salaryPromoterId" value="{{ $promoterId }}">
-                        <datalist id="salaryPromotersList">
-                            @foreach($promoters as $p)
-                                <option value="{{ $p->promoter_full_name }}" data-id="{{ $p->promoter_id }}"></option>
-                            @endforeach
-                        </datalist>
-                    </div>
+<div class="vp-filter mb-3">
+    <form method="GET" action="{{ route('module.route_actions') }}" class="vp-filter-form vp-filter-stack">
+        <div class="vp-filter-fields">
+            <div class="vp-filter-group">
+                <span class="vp-filter-label">Дата</span>
+                <span class="vp-filter-inline">с</span>
+                <input type="date" class="form-control form-control-sm vp-filter-date" name="date_from" value="{{ $dateFrom }}">
+                <span class="vp-filter-inline">по</span>
+                <input type="date" class="form-control form-control-sm vp-filter-date" name="date_to" value="{{ $dateTo }}">
+            </div>
+
+            <div class="vp-filter-group">
+                <input type="text" class="form-control form-control-sm vp-filter-search"
+                       placeholder="Промоутер" list="promotersList"
+                       value="{{ $promoterSelected?->promoter_full_name }}"
+                       data-searchable-select data-hidden-target="promoterId">
+                <input type="hidden" name="promoter_id" id="promoterId" value="{{ $promoterId }}">
+                <datalist id="promotersList">
+                    @foreach($promoters as $p)
+                        <option value="{{ $p->promoter_full_name }}" data-id="{{ $p->promoter_id }}"></option>
+                    @endforeach
+                </datalist>
+            </div>
+
+            <div class="vp-filter-group">
+                <select class="form-select form-select-sm vp-filter-status vp-filter-status-compact" name="status">
+                    <option value="">Статус: все</option>
+                    <option value="active" @selected($status==='active')>Активен</option>
+                    <option value="trainee" @selected($status==='trainee')>Стажёр</option>
+                    <option value="paused" @selected($status==='paused')>Пауза</option>
+                    <option value="fired" @selected($status==='fired')>Уволен</option>
+                </select>
+            </div>
+
+            <div class="vp-filter-group">
+                <input type="text" class="form-control form-control-sm vp-filter-search"
+                       placeholder="Маршрут" list="routesList"
+                       value="{{ $routeSelected?->route_code }}"
+                       data-searchable-select data-hidden-target="routeId">
+                <input type="hidden" name="route_id" id="routeId" value="{{ $routeId }}">
+                <datalist id="routesList">
+                    @foreach($routes as $r)
+                        <option value="{{ $r->route_code }}" data-id="{{ $r->route_id }}"></option>
+                    @endforeach
+                </datalist>
+            </div>
+            @if(!empty($canEdit))
+                <div class="vp-filter-group ms-auto">
+                    <a class="btn btn-primary btn-sm vp-btn" href="{{ route('route_actions.create') }}">Добавить</a>
                 </div>
-            </div>
+            @endif
+        </div>
 
-            <div class="vp-filter-actions">
-                <button class="btn btn-outline-primary btn-sm vp-btn">Показать</button>
-                <a class="btn btn-outline-secondary btn-sm vp-btn" href="{{ route('salary.index') }}">Сброс</a>
+        <div class="vp-filter-actions">
+            <button class="btn btn-outline-primary btn-sm vp-btn">Показать</button>
+            <a class="btn btn-outline-secondary btn-sm vp-btn" href="{{ route('module.route_actions') }}">Сброс</a>
+        </div>
+    </form>
+
+    @if(!empty($hasFilters))
+        <div class="vp-filter-summary">
+            <div class="text-muted">
+                Итого оплата: <strong>{{ (int)($sumPayment ?? 0) }}</strong>
             </div>
-        </form>
-    </div>
+            <div class="text-muted">
+                Записей: <strong>{{ $actions->total() }}</strong>
+            </div>
+        </div>
+    @endif
 </div>
 
-<div class="card mb-3">
+<div class="card">
     <div class="table-responsive">
         <table class="table table-striped table-hover mb-0">
             <thead>
             <tr>
-                <th style="width: 160px;">Период</th>
+                <th>Дата</th>
                 <th>Промоутер</th>
-                <th style="width: 160px;">По разноске</th>
-                <th style="width: 160px;">Корректировки</th>
-                <th style="width: 160px;">Итого</th>
+                <th>Маршрут</th>
+                <th>Макеты</th>
+                <th>Листовки<br><span class="text-muted" style="font-size: 12px;">сделано / выдано</span></th>
+                <th>Расклейка<br><span class="text-muted" style="font-size: 12px;">сделано / выдано</span></th>
+                <th>Визитки<br><span class="text-muted" style="font-size: 12px;">сделано / выдано</span></th>
+                <th>Ящики</th>
+                <th>Оплата</th>
+                <th>Комментарий</th>
+                <th>Внёс</th>
+                @if(!empty($canEdit))
+                    <th style="width: 80px;"></th>
+                @endif
             </tr>
             </thead>
             <tbody>
-            @foreach($rows as $r)
+            @foreach($actions as $a)
                 <tr>
-                    <td class="text-muted">{{ $periodLabel }}</td>
-                    <td class="fw-semibold">{{ $r['promoter_name'] }}</td>
-                    <td>{{ $r['sum_payment'] }}</td>
-                    <td>{{ $r['sum_adj'] }}</td>
-                    <td class="fw-semibold">{{ $r['sum_final'] }}</td>
+                    <td>{{ $a->action_date }}</td>
+                    <td>{{ $a->promoter?->promoter_full_name ?? ('ID ' . $a->promoter_id) }}</td>
+                    <td>{{ $a->route?->route_code ?? ('ID ' . $a->route_id) }}</td>
+                    <td>{{ $templatesText($a->templates) }}</td>
+                    <td>
+                        <div class="fw-semibold">{{ $a->leaflets_total }}</div>
+                        <div class="text-muted" style="font-size: 12px;">выдано {{ $a->leaflets_issued ?? 0 }}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold">{{ $a->posters_total }}</div>
+                        <div class="text-muted" style="font-size: 12px;">выдано {{ $a->posters_issued ?? 0 }}</div>
+                    </td>
+                    <td>
+                        <div class="fw-semibold">{{ $a->cards_count }}</div>
+                        <div class="text-muted" style="font-size: 12px;">выдано {{ $a->cards_issued ?? 0 }}</div>
+                    </td>
+                    <td>{{ $a->boxes_done }}</td>
+                    <td>{{ $a->payment_amount ?? 0 }}</td>
+                    <td>{{ $a->action_comment }}</td>
+                    <td>{{ $a->createdBy?->user_login ?? '—' }}</td>
+
+                    @if(!empty($canEdit))
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                        title="Действия">
+                                    ⋮
+                                </button>
+
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('route_actions.edit', $a) }}">
+                                            Править
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST"
+                                              action="{{ route('route_actions.destroy', $a) }}"
+                                              onsubmit="return confirm('Удалить запись разноски?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="dropdown-item text-danger" type="submit">
+                                                Удалить
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    @endif
                 </tr>
             @endforeach
 
-            @if(count($rows) === 0)
-                <tr><td colspan="5" class="text-center text-muted p-4">Нет данных за выбранный период</td></tr>
+            @if($actions->count() === 0)
+                <tr>
+                    <td colspan="{{ !empty($canEdit) ? 12 : 11 }}" class="text-center text-muted p-4">
+                        Пока нет записей разноски
+                    </td>
+                </tr>
             @endif
             </tbody>
-
-            @if(count($rows) > 0)
-                <tfoot>
-                <tr>
-                    <th class="text-muted">{{ $periodLabel }}</th>
-                    <th>Итого</th>
-                    <th>{{ $totalPayment }}</th>
-                    <th>{{ $totalAdj }}</th>
-                    <th>{{ $totalFinal }}</th>
-                </tr>
-                </tfoot>
-            @endif
         </table>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header">
-        Последние корректировки
-    </div>
-
-    <div class="table-responsive">
-        <table class="table table-hover mb-0">
-            <thead>
-            <tr>
-                <th style="width: 140px;">Дата</th>
-                <th>Промоутер</th>
-                <th style="width: 140px;">Сумма</th>
-                <th>Комментарий</th>
-                <th style="width: 160px;">Внёс</th>
-                <th style="width: 90px;"></th>
-            </tr>
-            </thead>
-            <tbody>
-            @foreach($lastAdjustments as $a)
-                <tr>
-                    <td>{{ $a->adj_date }}</td>
-                    <td>{{ $a->promoter?->promoter_full_name ?? ('ID ' . $a->promoter_id) }}</td>
-                    <td class="{{ (int)$a->amount < 0 ? 'text-danger' : 'text-success' }}">
-                        {{ $a->amount }}
-                    </td>
-                    <td>{{ $a->comment ?? '—' }}</td>
-                    <td>{{ $a->createdBy?->user_login ?? '—' }}</td>
-                    <td class="text-end">
-                        @if(!empty($canEdit))
-                            <div class="d-flex justify-content-end gap-2">
-                                <a class="btn btn-sm btn-outline-secondary" href="{{ route('salary.adjustments.edit', $a) }}">
-                                    Править
-                                </a>
-                                <form method="POST"
-                                      action="{{ route('salary.adjustments.destroy', $a) }}"
-                                      onsubmit="return confirm('Удалить корректировку?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="btn btn-sm btn-outline-danger">×</button>
-                                </form>
-                            </div>
-                        @endif
-                    </td>
-                </tr>
-            @endforeach
-
-            @if($lastAdjustments->count() === 0)
-                <tr><td colspan="6" class="text-center text-muted p-4">Пока нет корректировок</td></tr>
-            @endif
-            </tbody>
-        </table>
-    </div>
+<div class="mt-3">
+    {{ $actions->links() }}
 </div>
 @endsection
 
