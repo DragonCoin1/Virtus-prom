@@ -15,6 +15,9 @@ class FullTestSeeder extends Seeder
         Schema::disableForeignKeyConstraints();
 
         foreach ([
+            'ad_residuals',
+            'instructions',
+            'promoter_salaries',
             'role_module_access',
             'users',
             'roles',
@@ -40,9 +43,12 @@ class FullTestSeeder extends Seeder
         $this->seedPromoters();
         $this->call(RoutesSeeder::class);
         $this->seedTemplates();
+        $this->seedAdResiduals();
         $this->seedRouteActions();
         $this->seedInterviews();
+        $this->seedPromoterSalaries();
         $this->seedSalaryAdjustments();
+        $this->seedInstructions();
     }
 
     private function seedRolesAndUsers(): void
@@ -372,6 +378,37 @@ class FullTestSeeder extends Seeder
         }
     }
 
+    private function seedAdResiduals(): void
+    {
+        if (!Schema::hasTable('ad_residuals') || !Schema::hasTable('branches')) return;
+
+        $branchIds = DB::table('branches')->pluck('branch_id')->toArray();
+        if (empty($branchIds)) return;
+
+        $types = ['leaflet', 'card', 'poster', 'other'];
+        $rows = [];
+
+        foreach ($branchIds as $branchId) {
+            $itemsCount = random_int(2, 4);
+            for ($i = 0; $i < $itemsCount; $i++) {
+                $amount = random_int(200, 1200);
+                $remaining = random_int(0, $amount);
+                $rows[] = [
+                    'branch_id' => $branchId,
+                    'ad_type' => $types[array_rand($types)],
+                    'ad_amount' => $amount,
+                    'remaining_amount' => $remaining,
+                    'received_at' => Carbon::now()->subDays(random_int(1, 45))->format('Y-m-d'),
+                    'notes' => (random_int(1, 4) === 1) ? 'тестовые остатки' : null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+        }
+
+        DB::table('ad_residuals')->insert($rows);
+    }
+
     private function seedInterviews(): void
     {
         if (!Schema::hasTable('interviews')) return;
@@ -416,6 +453,34 @@ class FullTestSeeder extends Seeder
         DB::table('interviews')->insert($rows);
     }
 
+    private function seedPromoterSalaries(): void
+    {
+        if (!Schema::hasTable('promoter_salaries') || !Schema::hasTable('promoters')) return;
+
+        $promoters = DB::table('promoters')->pluck('promoter_id')->toArray();
+        if (empty($promoters)) return;
+
+        $userId = null;
+        if (Schema::hasTable('users') && Schema::hasColumn('promoter_salaries', 'created_by')) {
+            $userId = DB::table('users')->value('id');
+        }
+
+        $rows = [];
+        foreach ($promoters as $promoterId) {
+            $rows[] = [
+                'promoter_id' => $promoterId,
+                'amount' => random_int(25000, 60000),
+                'salary_period' => Carbon::now()->startOfMonth()->format('Y-m-d'),
+                'created_by' => $userId,
+                'comment' => (random_int(1, 5) === 1) ? 'тестовая ставка' : null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        DB::table('promoter_salaries')->insert($rows);
+    }
+
     private function seedSalaryAdjustments(): void
     {
         if (!Schema::hasTable('salary_adjustments')) return;
@@ -441,6 +506,37 @@ class FullTestSeeder extends Seeder
         }
 
         DB::table('salary_adjustments')->insert($rows);
+    }
+
+    private function seedInstructions(): void
+    {
+        if (!Schema::hasTable('instructions')) return;
+
+        $creatorId = null;
+        if (Schema::hasTable('users') && Schema::hasColumn('instructions', 'created_by')) {
+            $creatorId = DB::table('users')->value('id');
+        }
+
+        $rows = [
+            [
+                'title' => 'Общие правила',
+                'body' => 'Ведите отчёты ежедневно и обновляйте остатки рекламы.',
+                'created_by' => $creatorId,
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'title' => 'Работа с промоутерами',
+                'body' => 'Назначайте ответственных и фиксируйте изменения по зарплате промоутеров.',
+                'created_by' => $creatorId,
+                'is_active' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ];
+
+        DB::table('instructions')->insert($rows);
     }
 
     private function pickSome(array $arr, int $count): array

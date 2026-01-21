@@ -28,7 +28,7 @@ class UsersSeeder extends Seeder
                 'role_id' => $roles['developer'],
                 'user_login' => 'developer',
                 'user_password_hash' => $developerHash,
-                'password' => $developerHash,
+                'password' => $developerHash, // <-- ВАЖНО: стандартное поле Laravel
                 'user_full_name' => 'Developer Admin',
                 'user_is_active' => 1,
             ]);
@@ -39,7 +39,7 @@ class UsersSeeder extends Seeder
                 'role_id' => $roles['manager'],
                 'user_login' => 'manager',
                 'user_password_hash' => $managerHash,
-                'password' => $managerHash,
+                'password' => $managerHash, // <-- ВАЖНО
                 'user_full_name' => 'Manager User',
                 'user_is_active' => 1,
             ]);
@@ -55,7 +55,7 @@ class UsersSeeder extends Seeder
         }
 
         foreach ($users as $user) {
-            if (($user['user_login'] ?? null) === 'manager') {
+            if ($user['user_login'] === 'manager') {
                 if ($branchId && in_array('branch_id', $columns, true)) {
                     $user['branch_id'] = $branchId;
                 }
@@ -63,7 +63,6 @@ class UsersSeeder extends Seeder
                     $user['city_id'] = $cityId;
                 }
             }
-
             DB::table('users')->updateOrInsert(
                 ['user_login' => $user['user_login']],
                 $user
