@@ -67,17 +67,17 @@
                     @endforeach
                 </datalist>
             </div>
-
+            @if(!empty($canEdit))
+                <div class="vp-filter-group ms-auto">
+                    <a class="btn btn-primary btn-sm vp-btn" href="{{ route('route_actions.create') }}">Добавить</a>
+                </div>
+            @endif
         </div>
 
         <div class="vp-filter-actions">
             <button class="btn btn-outline-primary btn-sm vp-btn">Показать</button>
             <a class="btn btn-outline-secondary btn-sm vp-btn" href="{{ route('module.route_actions') }}">Сброс</a>
         </div>
-
-        @if(!empty($canEdit))
-            <a class="btn btn-primary btn-sm vp-filter-add" href="{{ route('route_actions.create') }}" aria-label="Добавить запись">+</a>
-        @endif
     </form>
 
     @if(!empty($hasFilters))
