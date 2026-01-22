@@ -19,9 +19,23 @@
 
 <div class="vp-toolbar mb-3">
     <h3 class="m-0">Собеседования</h3>
-    @if(!empty($canEditModules['interviews']))
-        <a class="btn btn-primary btn-sm vp-btn" href="{{ route('interviews.create') }}">+ Добавить</a>
-    @endif
+    <div class="vp-toolbar-actions">
+        @php
+            // Для developer всегда показываем кнопку
+            $canAddInterview = false;
+            if (auth()->check()) {
+                $accessService = app(\App\Services\AccessService::class);
+                if ($accessService->isDeveloper(auth()->user())) {
+                    $canAddInterview = true;
+                } elseif (!empty($canEditModules['interviews'])) {
+                    $canAddInterview = true;
+                }
+            }
+        @endphp
+        @if($canAddInterview)
+            <a class="btn btn-primary btn-sm vp-btn" href="{{ route('interviews.create') }}">+ Добавить</a>
+        @endif
+    </div>
 </div>
 
 @if(session('ok'))
@@ -82,7 +96,18 @@
                 <th style="width: 160px;">Источник</th>
                 <th style="width: 170px;">Статус</th>
                 <th>Комментарий</th>
-                @if(!empty($canEditModules['interviews']))
+                @php
+                    $canEditInterview = false;
+                    if (auth()->check()) {
+                        $accessService = app(\App\Services\AccessService::class);
+                        if ($accessService->isDeveloper(auth()->user())) {
+                            $canEditInterview = true;
+                        } elseif (!empty($canEditModules['interviews'])) {
+                            $canEditInterview = true;
+                        }
+                    }
+                @endphp
+                @if($canEditInterview)
                     <th style="width: 90px;"></th>
                 @endif
             </tr>
@@ -100,7 +125,7 @@
                     <td>{{ $i->source ?? '—' }}</td>
                     <td><span class="badge rounded-pill {{ $s['badge'] }}">{{ $s['label'] }}</span></td>
                     <td>{{ $i->comment ?? '—' }}</td>
-                    @if(!empty($canEditModules['interviews']))
+                    @if($canEditInterview)
                         <td class="text-end">
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
@@ -130,7 +155,7 @@
 
             @if($interviews->count() === 0)
                 <tr>
-                    <td colspan="{{ !empty($canEditModules['interviews']) ? 8 : 7 }}" class="text-center text-muted p-4">Пока нет собеседований</td>
+                    <td colspan="{{ $canEditInterview ? 8 : 7 }}" class="text-center text-muted p-4">Пока нет собеседований</td>
                 </tr>
             @endif
             </tbody>
