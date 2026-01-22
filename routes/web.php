@@ -14,6 +14,7 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\UsersController;
 use App\Http\Controllers\InstructionsController;
 use App\Http\Controllers\AdResidualsController;
+use App\Http\Controllers\CitiesController;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
@@ -275,4 +276,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/users/{user}', [UsersController::class, 'destroy'])
         ->middleware('user.manage')
         ->name('users.destroy');
+
+    // CITIES (импорт)
+    Route::get('/cities', [CitiesController::class, 'index'])
+        ->name('cities.index');
+
+    Route::get('/cities/import', [CitiesController::class, 'importForm'])
+        ->name('cities.import.form');
+
+    Route::post('/cities/import', [CitiesController::class, 'import'])
+        ->name('cities.import');
 });
