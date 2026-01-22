@@ -52,6 +52,11 @@ class AdResidualsController extends Controller
             ->orderByDesc('ad_residual_id')
             ->paginate(20)
             ->appends($request->query());
+        
+        // Рассчитываем актуальные остатки для каждой записи
+        foreach ($residuals as $residual) {
+            $residual->calculated_remaining = self::calculateRemaining($residual->branch_id, $residual->ad_type);
+        }
 
         return view('ad_residuals.index', compact('residuals', 'branches'));
     }
@@ -81,16 +86,18 @@ class AdResidualsController extends Controller
             abort(403, 'Нет доступа к филиалу');
         }
 
+        // При создании прихода остаток равен полученному количеству
+        // (расход будет вычитаться автоматически из разноски)
         AdResidual::create([
             'branch_id' => (int) $data['branch_id'],
             'ad_type' => $data['ad_type'],
             'ad_amount' => (int) $data['ad_amount'],
-            'remaining_amount' => (int) $data['remaining_amount'],
+            'remaining_amount' => (int) $data['ad_amount'], // Изначально остаток = получено
             'received_at' => $data['received_at'],
             'notes' => $data['notes'] ?? null,
         ]);
 
-        return redirect()->route('ad_residuals.index')->with('ok', 'Остатки добавлены');
+        return redirect()->route('ad_residuals.index')->with('ok', 'Приход рекламы добавлен');
     }
 
     public function edit(AdResidual $adResidual, AccessService $accessService)
@@ -126,7 +133,7 @@ class AdResidualsController extends Controller
             'branch_id' => (int) $data['branch_id'],
             'ad_type' => $data['ad_type'],
             'ad_amount' => (int) $data['ad_amount'],
-            'remaining_amount' => (int) $data['remaining_amount'],
+            'remaining_amount' => (int) $data['ad_amount'], // Обновляем при изменении прихода
             'received_at' => $data['received_at'],
             'notes' => $data['notes'] ?? null,
         ]);
@@ -152,12 +159,43 @@ class AdResidualsController extends Controller
     {
         return $request->validate([
             'branch_id' => ['required', 'integer', 'exists:branches,branch_id'],
-            'ad_type' => ['required', 'string', 'max:50'],
+            'ad_type' => ['required', 'in:листовки,расклейка,визитки'],
             'ad_amount' => ['required', 'integer', 'min:0'],
-            'remaining_amount' => ['required', 'integer', 'min:0'],
             'received_at' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:255'],
         ]);
+    }
+    
+    /**
+     * Рассчитывает текущий остаток рекламы на филиале
+     * Остаток = сумма всех приходов - сумма всех расходов из разноски
+     */
+    public static function calculateRemaining(int $branchId, string $adType): int
+    {
+        // Сумма всех приходов
+        $totalReceived = \App\Models\AdResidual::where('branch_id', $branchId)
+            ->where('ad_type', $adType)
+            ->sum('ad_amount');
+        
+        // Сумма всех расходов из разноски
+        $totalIssued = 0;
+        $promoters = \App\Models\Promoter::where('branch_id', $branchId)->pluck('promoter_id');
+        
+        if ($promoters->isNotEmpty()) {
+            $routeActions = \App\Models\RouteAction::whereIn('promoter_id', $promoters)->get();
+            
+            foreach ($routeActions as $action) {
+                if ($adType === 'листовки') {
+                    $totalIssued += $action->leaflets_issued ?? 0;
+                } elseif ($adType === 'расклейка') {
+                    $totalIssued += $action->posters_issued ?? 0;
+                } elseif ($adType === 'визитки') {
+                    $totalIssued += $action->cards_issued ?? 0;
+                }
+            }
+        }
+        
+        return max(0, $totalReceived - $totalIssued);
     }
 
     private function assertResidualAccess(AccessService $accessService): void

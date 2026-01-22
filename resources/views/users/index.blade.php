@@ -6,7 +6,7 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4">Пользователи</h1>
-        @if(!empty($canManageUsers))
+        @if($canManageUsers ?? false)
             <a href="{{ route('users.create') }}" class="btn btn-primary">Добавить</a>
         @endif
     </div>
@@ -38,7 +38,7 @@
                     <td>{{ $user->branch?->branch_name ?? '—' }}</td>
                     <td>{{ (int) $user->user_is_active === 1 ? 'Да' : 'Нет' }}</td>
                     <td class="text-end">
-                        @if(!empty($canManageUsers))
+                        @if($canManageUsers ?? false)
                             <a class="btn btn-sm btn-outline-secondary" href="{{ route('users.edit', $user) }}">Изменить</a>
                             <form method="POST" action="{{ route('users.destroy', $user) }}" class="d-inline">
                                 @csrf

@@ -59,7 +59,7 @@
                     <td>{{ $residual->branch?->branch_name ?? '—' }}</td>
                     <td>{{ $residual->ad_type }}</td>
                     <td>{{ $residual->ad_amount }}</td>
-                    <td>{{ $residual->remaining_amount }}</td>
+                    <td><strong>{{ $residual->calculated_remaining ?? $residual->remaining_amount }}</strong></td>
                     <td>{{ $residual->received_at?->format('d.m.Y') }}</td>
                     <td>{{ $residual->notes ?? '—' }}</td>
                     <td class="text-end">

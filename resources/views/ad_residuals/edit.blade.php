@@ -33,17 +33,19 @@
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label">Тип рекламы</label>
-                <input name="ad_type" class="form-control" value="{{ old('ad_type', $adResidual->ad_type) }}" required>
+                <select name="ad_type" class="form-select" required>
+                    <option value="">— выберите —</option>
+                    <option value="листовки" {{ old('ad_type', $adResidual->ad_type) === 'листовки' ? 'selected' : '' }}>Листовки</option>
+                    <option value="расклейка" {{ old('ad_type', $adResidual->ad_type) === 'расклейка' ? 'selected' : '' }}>Расклейка</option>
+                    <option value="визитки" {{ old('ad_type', $adResidual->ad_type) === 'визитки' ? 'selected' : '' }}>Визитки</option>
+                </select>
             </div>
-            <div class="col-md-4 mb-3">
-                <label class="form-label">Получено</label>
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Получено (количество)</label>
                 <input type="number" min="0" name="ad_amount" class="form-control" value="{{ old('ad_amount', $adResidual->ad_amount) }}" required>
+                <small class="text-muted">Остаток рассчитывается автоматически: приход - расход из разноски</small>
             </div>
-            <div class="col-md-4 mb-3">
-                <label class="form-label">Остаток</label>
-                <input type="number" min="0" name="remaining_amount" class="form-control" value="{{ old('remaining_amount', $adResidual->remaining_amount) }}" required>
-            </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-6 mb-3">
                 <label class="form-label">Дата получения</label>
                 <input type="date" name="received_at" class="form-control" value="{{ old('received_at', $adResidual->received_at?->format('Y-m-d')) }}" required>
             </div>

@@ -5,7 +5,10 @@
 @section('content')
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h4">Инструкции</h1>
+        <div>
+            <h1 class="h4 mb-0">Инструкции</h1>
+            <small class="text-muted">Документы и инструкции для работы промоутеров и менеджеров</small>
+        </div>
         @if(!empty($canEditModules['instructions']))
             <a href="{{ route('instructions.create') }}" class="btn btn-primary">Добавить</a>
         @endif
