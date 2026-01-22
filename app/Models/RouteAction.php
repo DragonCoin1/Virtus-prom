@@ -59,7 +59,6 @@ class RouteAction extends Model
             'branch_id'
         );
     }
-}
 
     public function templates()
     {
