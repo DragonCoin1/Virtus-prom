@@ -24,7 +24,19 @@
 <div class="vp-toolbar mb-3">
     <h3 class="m-0">Промоутеры</h3>
     <div class="vp-toolbar-actions">
-        @if(!empty($canEditModules['promoters']))
+        @php
+            // Для developer всегда показываем кнопки
+            $canManagePromoters = false;
+            if (auth()->check()) {
+                $accessService = app(\App\Services\AccessService::class);
+                if ($accessService->isDeveloper(auth()->user())) {
+                    $canManagePromoters = true;
+                } elseif (!empty($canEditModules['promoters'])) {
+                    $canManagePromoters = true;
+                }
+            }
+        @endphp
+        @if($canManagePromoters)
             <a class="btn btn-primary btn-sm vp-btn" href="{{ route('promoters.create') }}">Добавить</a>
             <a class="btn btn-outline-primary btn-sm vp-btn" href="{{ route('promoters.import.form') }}">Импорт</a>
         @endif
@@ -92,7 +104,7 @@
                     <td>{{ $p->promoter_comment }}</td>
 
                     <td class="text-end">
-                        @if(!empty($canEditModules['promoters']))
+                        @if($canManagePromoters)
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
                                         type="button"
