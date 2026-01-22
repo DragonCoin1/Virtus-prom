@@ -13,9 +13,13 @@
 <div class="vp-toolbar mb-3">
     <h3 class="mb-0">Карты</h3>
     <div class="vp-toolbar-actions">
-        <a href="{{ route('routes.create') }}" class="btn btn-sm btn-outline-primary vp-btn">+ Маршрут</a>
-        <a href="{{ route('routes.import.form') }}" class="btn btn-sm btn-primary vp-btn">Импорт</a>
-        <a class="btn btn-outline-primary btn-sm vp-btn" href="{{ route('ad_templates.index') }}">Макеты</a>
+        @if(!empty($canEditModules['routes']))
+            <a href="{{ route('routes.create') }}" class="btn btn-sm btn-outline-primary vp-btn">+ Маршрут</a>
+            <a href="{{ route('routes.import.form') }}" class="btn btn-sm btn-primary vp-btn">Импорт</a>
+        @endif
+        @if(!empty($canViewModules['ad_templates']))
+            <a class="btn btn-outline-primary btn-sm vp-btn" href="{{ route('ad_templates.index') }}">Макеты</a>
+        @endif
     </div>
 </div>
 
@@ -68,11 +72,13 @@
                                     ⋮
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end">
-                                    <li>
-                                        <a class="dropdown-item" href="{{ route('routes.edit', $r->route_id) }}">
-                                            Редактировать
-                                        </a>
-                                    </li>
+                                    @if(!empty($canEditModules['routes']))
+                                        <li>
+                                            <a class="dropdown-item" href="{{ route('routes.edit', $r->route_id) }}">
+                                                Редактировать
+                                            </a>
+                                        </li>
+                                    @endif
                                     <li>
                                         <a class="dropdown-item" href="{{ route('module.route_actions', ['route_id' => $r->route_id]) }}">
                                             Разноска по маршруту

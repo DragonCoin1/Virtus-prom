@@ -24,8 +24,10 @@
 <div class="vp-toolbar mb-3">
     <h3 class="m-0">Промоутеры</h3>
     <div class="vp-toolbar-actions">
-        <a class="btn btn-primary btn-sm vp-btn" href="{{ route('promoters.create') }}">Добавить</a>
-        <a class="btn btn-outline-primary btn-sm vp-btn" href="{{ route('promoters.import.form') }}">Импорт</a>
+        @if(!empty($canEditModules['promoters']))
+            <a class="btn btn-primary btn-sm vp-btn" href="{{ route('promoters.create') }}">Добавить</a>
+            <a class="btn btn-outline-primary btn-sm vp-btn" href="{{ route('promoters.import.form') }}">Импорт</a>
+        @endif
     </div>
 </div>
 
@@ -90,34 +92,36 @@
                     <td>{{ $p->promoter_comment }}</td>
 
                     <td class="text-end">
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                    type="button"
-                                    data-bs-toggle="dropdown"
-                                    aria-expanded="false"
-                                    title="Действия">
-                                ⋮
-                            </button>
+                        @if(!empty($canEditModules['promoters']))
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                        title="Действия">
+                                    ⋮
+                                </button>
 
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('promoters.edit', $p) }}">
-                                        Править
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form method="POST" action="{{ route('promoters.destroy', $p) }}"
-                                          onsubmit="return confirm('Удалить промоутера: {{ $p->promoter_full_name }} ?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button class="dropdown-item text-danger" type="submit">
-                                            Удалить
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('promoters.edit', $p) }}">
+                                            Править
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST" action="{{ route('promoters.destroy', $p) }}"
+                                              onsubmit="return confirm('Удалить промоутера: {{ $p->promoter_full_name }} ?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="dropdown-item text-danger" type="submit">
+                                                Удалить
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        @endif
                     </td>
                 </tr>
             @endforeach

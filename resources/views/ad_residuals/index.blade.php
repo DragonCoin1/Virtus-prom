@@ -6,7 +6,9 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4">Остатки рекламы</h1>
-        <a href="{{ route('ad_residuals.create') }}" class="btn btn-primary">Добавить</a>
+        @if(!empty($canEditModules['ad_residuals']))
+            <a href="{{ route('ad_residuals.create') }}" class="btn btn-primary">Добавить</a>
+        @endif
     </div>
 
     @if(session('ok'))
@@ -61,12 +63,14 @@
                     <td>{{ $residual->received_at?->format('d.m.Y') }}</td>
                     <td>{{ $residual->notes ?? '—' }}</td>
                     <td class="text-end">
-                        <a class="btn btn-sm btn-outline-secondary" href="{{ route('ad_residuals.edit', $residual) }}">Изменить</a>
-                        <form method="POST" action="{{ route('ad_residuals.destroy', $residual) }}" class="d-inline">
-                            @csrf
-                            @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить запись?')">Удалить</button>
-                        </form>
+                        @if(!empty($canEditModules['ad_residuals']))
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ route('ad_residuals.edit', $residual) }}">Изменить</a>
+                            <form method="POST" action="{{ route('ad_residuals.destroy', $residual) }}" class="d-inline">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить запись?')">Удалить</button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
             @empty

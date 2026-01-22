@@ -16,6 +16,27 @@
 <body class="vp-body">
 
 <div class="vp-shell">
+    @php
+        use Illuminate\Support\Facades\DB;
+        use App\Services\AccessService;
+
+        $canViewModules = [];
+        $canEditModules = [];
+        $canManageUsers = false;
+
+        if (auth()->check()) {
+            $roleAccess = DB::table('role_module_access')
+                ->where('role_id', auth()->user()->role_id)
+                ->get();
+
+            foreach ($roleAccess as $accessRow) {
+                $canViewModules[$accessRow->module_code] = (int) $accessRow->can_view === 1;
+                $canEditModules[$accessRow->module_code] = (int) $accessRow->can_edit === 1;
+            }
+
+            $canManageUsers = !app(AccessService::class)->isPromoter(auth()->user());
+        }
+    @endphp
     <header class="vp-header">
         <div class="container-fluid vp-header-inner">
             <div class="vp-brand-inline">
@@ -28,18 +49,42 @@
             </div>
 
             <nav class="vp-nav vp-nav-horizontal">
-                <a class="vp-nav-link {{ request()->routeIs('module.promoters') ? 'active' : '' }}" href="{{ route('module.promoters') }}">Промоутеры</a>
+                @if(!empty($canViewModules['promoters']))
+                    <a class="vp-nav-link {{ request()->routeIs('module.promoters') ? 'active' : '' }}" href="{{ route('module.promoters') }}">Промоутеры</a>
+                @endif
 
-                <a class="vp-nav-link {{ request()->routeIs('module.route_actions') || request()->routeIs('route_actions.*') ? 'active' : '' }}"
-                   href="{{ route('module.route_actions') }}">Разноска</a>
+                @if(!empty($canViewModules['route_actions']))
+                    <a class="vp-nav-link {{ request()->routeIs('module.route_actions') || request()->routeIs('route_actions.*') ? 'active' : '' }}"
+                       href="{{ route('module.route_actions') }}">Разноска</a>
+                @endif
 
-                <a class="vp-nav-link {{ request()->routeIs('module.cards') ? 'active' : '' }}" href="{{ route('module.cards') }}">Карты</a>
+                @if(!empty($canViewModules['cards']))
+                    <a class="vp-nav-link {{ request()->routeIs('module.cards') ? 'active' : '' }}" href="{{ route('module.cards') }}">Карты</a>
+                @endif
 
-                <a class="vp-nav-link {{ request()->routeIs('interviews.*') ? 'active' : '' }}" href="{{ route('interviews.index') }}">Собеседования</a>
+                @if(!empty($canViewModules['interviews']))
+                    <a class="vp-nav-link {{ request()->routeIs('interviews.*') ? 'active' : '' }}" href="{{ route('interviews.index') }}">Собеседования</a>
+                @endif
 
-                <a class="vp-nav-link {{ request()->routeIs('salary.*') ? 'active' : '' }}" href="{{ route('salary.index') }}">Зарплата</a>
+                @if(!empty($canViewModules['salary']))
+                    <a class="vp-nav-link {{ request()->routeIs('salary.*') ? 'active' : '' }}" href="{{ route('salary.index') }}">Зарплата</a>
+                @endif
 
-                <a class="vp-nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.index') }}">Отчёты</a>
+                @if(!empty($canViewModules['reports']))
+                    <a class="vp-nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.index') }}">Отчёты</a>
+                @endif
+
+                @if(!empty($canViewModules['ad_residuals']))
+                    <a class="vp-nav-link {{ request()->routeIs('ad_residuals.*') ? 'active' : '' }}" href="{{ route('ad_residuals.index') }}">Остатки</a>
+                @endif
+
+                @if(!empty($canViewModules['instructions']))
+                    <a class="vp-nav-link {{ request()->routeIs('instructions.*') ? 'active' : '' }}" href="{{ route('instructions.index') }}">Инструкции</a>
+                @endif
+
+                @if($canManageUsers)
+                    <a class="vp-nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">Пользователи</a>
+                @endif
             </nav>
 
             <form method="POST" action="{{ route('logout') }}" class="vp-logout">

@@ -4,7 +4,9 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="m-0">Макеты</h3>
-    <a class="btn btn-primary btn-sm" href="{{ route('ad_templates.create') }}">+ Добавить</a>
+    @if(!empty($canEditModules['ad_templates']))
+        <a class="btn btn-primary btn-sm" href="{{ route('ad_templates.create') }}">+ Добавить</a>
+    @endif
 </div>
 
 @if(session('ok'))
@@ -78,26 +80,28 @@
                         @endif
                     </td>
                     <td class="text-end">
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                ⋮
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('ad_templates.edit', $t) }}">Править</a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form method="POST" action="{{ route('ad_templates.toggle', $t) }}">
-                                        @csrf
-                                        <button class="dropdown-item" type="submit">
-                                            {{ $t->is_active ? 'Выключить' : 'Включить' }}
-                                        </button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
+                        @if(!empty($canEditModules['ad_templates']))
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    ⋮
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('ad_templates.edit', $t) }}">Править</a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST" action="{{ route('ad_templates.toggle', $t) }}">
+                                            @csrf
+                                            <button class="dropdown-item" type="submit">
+                                                {{ $t->is_active ? 'Выключить' : 'Включить' }}
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        @endif
                     </td>
                 </tr>
             @endforeach

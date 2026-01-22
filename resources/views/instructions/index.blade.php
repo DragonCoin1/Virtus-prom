@@ -6,7 +6,9 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4">Инструкции</h1>
-        <a href="{{ route('instructions.create') }}" class="btn btn-primary">Добавить</a>
+        @if(!empty($canEditModules['instructions']))
+            <a href="{{ route('instructions.create') }}" class="btn btn-primary">Добавить</a>
+        @endif
     </div>
 
     @if(session('ok'))
@@ -46,16 +48,18 @@
                     <td>{{ $instruction->is_active ? 'Активна' : 'Неактивна' }}</td>
                     <td>{{ $instruction->created_at?->format('d.m.Y') }}</td>
                     <td class="text-end">
-                        <a class="btn btn-sm btn-outline-secondary" href="{{ route('instructions.edit', $instruction) }}">Изменить</a>
-                        <form class="d-inline" method="POST" action="{{ route('instructions.toggle', $instruction) }}">
-                            @csrf
-                            <button class="btn btn-sm btn-outline-warning">{{ $instruction->is_active ? 'Скрыть' : 'Показать' }}</button>
-                        </form>
-                        <form class="d-inline" method="POST" action="{{ route('instructions.destroy', $instruction) }}">
-                            @csrf
-                            @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить инструкцию?')">Удалить</button>
-                        </form>
+                        @if(!empty($canEditModules['instructions']))
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ route('instructions.edit', $instruction) }}">Изменить</a>
+                            <form class="d-inline" method="POST" action="{{ route('instructions.toggle', $instruction) }}">
+                                @csrf
+                                <button class="btn btn-sm btn-outline-warning">{{ $instruction->is_active ? 'Скрыть' : 'Показать' }}</button>
+                            </form>
+                            <form class="d-inline" method="POST" action="{{ route('instructions.destroy', $instruction) }}">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить инструкцию?')">Удалить</button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
             @empty

@@ -6,7 +6,9 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4">Пользователи</h1>
-        <a href="{{ route('users.create') }}" class="btn btn-primary">Добавить</a>
+        @if(!empty($canManageUsers))
+            <a href="{{ route('users.create') }}" class="btn btn-primary">Добавить</a>
+        @endif
     </div>
 
     @if(session('ok'))
@@ -36,12 +38,14 @@
                     <td>{{ $user->branch?->branch_name ?? '—' }}</td>
                     <td>{{ (int) $user->user_is_active === 1 ? 'Да' : 'Нет' }}</td>
                     <td class="text-end">
-                        <a class="btn btn-sm btn-outline-secondary" href="{{ route('users.edit', $user) }}">Изменить</a>
-                        <form method="POST" action="{{ route('users.destroy', $user) }}" class="d-inline">
-                            @csrf
-                            @method('DELETE')
-                            <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить пользователя?')">Удалить</button>
-                        </form>
+                        @if(!empty($canManageUsers))
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ route('users.edit', $user) }}">Изменить</a>
+                            <form method="POST" action="{{ route('users.destroy', $user) }}" class="d-inline">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить пользователя?')">Удалить</button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
             @empty
