@@ -648,6 +648,57 @@ html{
     font-weight: 600;
 }
 
+/* City autocomplete */
+.vp-city-autocomplete{
+    position: relative;
+    z-index: 1;
+}
+
+.vp-city-autocomplete input{
+    width: 100%;
+}
+
+.vp-city-autocomplete-dropdown{
+    position: fixed;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 9999;
+    margin-top: 0;
+    display: none;
+    min-width: 200px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.vp-city-autocomplete-dropdown.show{
+    display: block;
+}
+
+.vp-city-autocomplete-item{
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f3f5;
+    transition: background-color 0.15s;
+}
+
+.vp-city-autocomplete-item:last-child{
+    border-bottom: none;
+}
+
+.vp-city-autocomplete-item:hover,
+.vp-city-autocomplete-item.highlighted{
+    background-color: #f8f9fa;
+}
+
+.vp-city-autocomplete-item.selected{
+    background-color: #e7f3ff;
+    font-weight: 500;
+}
+
 /* Responsive improvements */
 @media (max-width: 768px){
     .vp-page{

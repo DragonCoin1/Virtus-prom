@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Interview;
+use App\Services\AccessService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class InterviewsController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, AccessService $accessService)
     {
         $today = Carbon::today()->toDateString();
         $q = Interview::query()->with(['createdBy']);
@@ -19,23 +20,64 @@ class InterviewsController extends Controller
         $user = $request->user();
         if ($user) {
             $accessService = app(\App\Services\AccessService::class);
-            // Если пользователь ограничен филиалом, показываем только собеседования созданные пользователями его филиала
-            if ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
-                $q->whereHas('createdBy', function ($query) use ($user) {
-                    $query->where('branch_id', $user->branch_id);
-                });
-            } elseif ($accessService->isRegionalDirector($user)) {
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    $q->whereHas('createdBy', function ($query) use ($region) {
-                        $query->whereHas('city', function ($q) use ($region) {
-                            $q->where('region_name', $region);
-                        })->orWhereHas('branch.city', function ($q) use ($region) {
-                            $q->where('region_name', $region);
-                        });
+            $hasCityId = \Illuminate\Support\Facades\Schema::hasColumn('interviews', 'city_id');
+            
+            // Фильтр по городу из запроса (для developer, general_director, regional_director)
+            $filterCityId = $request->input('city_id');
+            
+            if ($hasCityId) {
+                // Фильтрация через city_id
+                if (($accessService->isManager($user) || $accessService->isBranchDirector($user)) && !empty($user->branch_id)) {
+                    // Директор и менеджер - только свой город
+                    $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+                    if ($cityId) {
+                        $q->where('city_id', $cityId);
+                    } else {
+                        $q->whereRaw('1=0');
+                    }
+                } elseif ($accessService->isRegionalDirector($user)) {
+                    // Региональный директор - города своего региона
+                    $region = $accessService->regionName($user);
+                    if ($region) {
+                        if ($filterCityId) {
+                            // Если выбран конкретный город - проверяем доступ
+                            $cityExists = \App\Models\City::where('city_id', $filterCityId)
+                                ->where('region_name', $region)
+                                ->exists();
+                            if ($cityExists) {
+                                $q->where('city_id', $filterCityId);
+                            }
+                        } else {
+                            $q->whereHas('city', function ($query) use ($region) {
+                                $query->where('region_name', $region);
+                            });
+                        }
+                    } else {
+                        $q->whereRaw('1=0');
+                    }
+                } elseif (($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) && $filterCityId) {
+                    // Developer и General Director - фильтр по выбранному городу
+                    $q->where('city_id', $filterCityId);
+                }
+            } else {
+                // Если столбца еще нет, фильтруем через createdBy
+                if ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
+                    $q->whereHas('createdBy', function ($query) use ($user) {
+                        $query->where('branch_id', $user->branch_id);
                     });
-                } else {
-                    $q->whereRaw('1=0');
+                } elseif ($accessService->isRegionalDirector($user)) {
+                    $region = $accessService->regionName($user);
+                    if ($region) {
+                        $q->whereHas('createdBy', function ($query) use ($region) {
+                            $query->whereHas('city', function ($q) use ($region) {
+                                $q->where('region_name', $region);
+                            })->orWhereHas('branch.city', function ($q) use ($region) {
+                                $q->where('region_name', $region);
+                            });
+                        });
+                    } else {
+                        $q->whereRaw('1=0');
+                    }
                 }
             }
         }
@@ -100,7 +142,20 @@ class InterviewsController extends Controller
             ->paginate(30)
             ->appends($request->query());
 
-        return view('interviews.index', compact('interviews'));
+        // Получаем доступные города для фильтра
+        $cities = collect();
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+                $cities = \App\Models\City::orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                }
+            }
+        }
+
+        return view('interviews.index', compact('interviews', 'cities', 'user'));
     }
 
     public function create()
@@ -115,7 +170,25 @@ class InterviewsController extends Controller
             abort(403, 'Нет прав на создание собеседований');
         }
 
-        return view('interviews.create');
+        // Для директора и менеджера - город определяется автоматически, не показываем выбор
+        $cities = null;
+        $showCitySelect = false;
+        
+        if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+            // Developer и General Director - все города
+            $cities = \App\Models\City::orderBy('city_name')->get();
+            $showCitySelect = true;
+        } elseif ($accessService->isRegionalDirector($user)) {
+            // Региональный директор - города своего региона
+            $region = $accessService->regionName($user);
+            if ($region) {
+                $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                $showCitySelect = true;
+            }
+        }
+        // Для директора и менеджера - city_id будет установлен автоматически, не показываем выбор
+
+        return view('interviews.create', compact('cities', 'user', 'showCitySelect'));
     }
 
     public function store(Request $request)
@@ -130,8 +203,23 @@ class InterviewsController extends Controller
             abort(403, 'Нет прав на создание собеседований');
         }
 
-        $data = $this->validateInterview($request);
+        $data = $this->validateInterview($request, $user, $accessService);
         $hasInterviewTime = Schema::hasColumn('interviews', 'interview_time');
+
+        // Определяем city_id
+        $cityId = null;
+        
+        // Для директора и менеджера - автоматически из филиала (приоритет, игнорируем форму)
+        if (($accessService->isManager($user) || $accessService->isBranchDirector($user)) && !empty($user->branch_id)) {
+            $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+        } elseif (!empty($data['city_id'])) {
+            // Для остальных - из формы, если указан
+            $cityId = (int) $data['city_id'];
+            // Проверяем доступ к городу
+            if (!$this->canAccessCity($user, $accessService, $cityId)) {
+                abort(403, 'Нет доступа к выбранному городу');
+            }
+        }
 
         $payload = [
             'interview_date' => $data['interview_date'],
@@ -142,6 +230,10 @@ class InterviewsController extends Controller
             'comment' => $data['comment'] ?? null,
             'created_by' => auth()->id(),
         ];
+
+        if ($cityId) {
+            $payload['city_id'] = $cityId;
+        }
 
         if ($hasInterviewTime) {
             $payload['interview_time'] = $data['interview_time'] ?? null;
@@ -154,13 +246,70 @@ class InterviewsController extends Controller
 
     public function edit(Interview $interview)
     {
-        return view('interviews.edit', compact('interview'));
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        $accessService = app(\App\Services\AccessService::class);
+        
+        // Проверяем доступ к собеседованию через город
+        if ($interview->city_id && !$this->canAccessCity($user, $accessService, $interview->city_id)) {
+            abort(403, 'Нет доступа к этому собеседованию');
+        }
+
+        // Для директора и менеджера - город определяется автоматически, не показываем выбор
+        $cities = null;
+        $showCitySelect = false;
+        
+        if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+            // Developer и General Director - все города
+            $cities = \App\Models\City::orderBy('city_name')->get();
+            $showCitySelect = true;
+        } elseif ($accessService->isRegionalDirector($user)) {
+            // Региональный директор - города своего региона
+            $region = $accessService->regionName($user);
+            if ($region) {
+                $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                $showCitySelect = true;
+            }
+        }
+        // Для директора и менеджера - city_id будет установлен автоматически, не показываем выбор
+
+        return view('interviews.edit', compact('interview', 'cities', 'user', 'showCitySelect'));
     }
 
     public function update(Request $request, Interview $interview)
     {
-        $data = $this->validateInterview($request);
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        $accessService = app(\App\Services\AccessService::class);
+        
+        // Проверяем доступ к собеседованию через город
+        if ($interview->city_id && !$this->canAccessCity($user, $accessService, $interview->city_id)) {
+            abort(403, 'Нет доступа к этому собеседованию');
+        }
+
+        $data = $this->validateInterview($request, $user, $accessService);
         $hasInterviewTime = Schema::hasColumn('interviews', 'interview_time');
+
+        // Определяем city_id
+        $cityId = null;
+        
+        // Для директора и менеджера - автоматически из филиала (приоритет, нельзя менять)
+        if (($accessService->isManager($user) || $accessService->isBranchDirector($user)) && !empty($user->branch_id)) {
+            $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+        } elseif (!empty($data['city_id'])) {
+            // Для остальных - из формы, если указан
+            $cityId = (int) $data['city_id'];
+            // Проверяем доступ к городу
+            if (!$this->canAccessCity($user, $accessService, $cityId)) {
+                abort(403, 'Нет доступа к выбранному городу');
+            }
+        }
 
         $payload = [
             'interview_date' => $data['interview_date'],
@@ -170,6 +319,10 @@ class InterviewsController extends Controller
             'status' => $data['status'] ?? 'planned',
             'comment' => $data['comment'] ?? null,
         ];
+
+        if ($cityId) {
+            $payload['city_id'] = $cityId;
+        }
 
         if ($hasInterviewTime) {
             $payload['interview_time'] = $data['interview_time'] ?? null;
@@ -186,9 +339,9 @@ class InterviewsController extends Controller
         return redirect()->route('interviews.index')->with('ok', 'Собеседование удалено');
     }
 
-    private function validateInterview(Request $request): array
+    private function validateInterview(Request $request, $user = null, $accessService = null): array
     {
-        return $request->validate([
+        $rules = [
             'interview_date' => ['required', 'date'],
             'interview_time' => ['nullable', 'date_format:H:i'],
             'candidate_name' => ['required', 'string', 'max:255'],
@@ -196,6 +349,58 @@ class InterviewsController extends Controller
             'source' => ['nullable', 'string', 'max:120'],
             'status' => ['required', 'in:planned,came,no_show,hired,rejected'],
             'comment' => ['nullable', 'string', 'max:255'],
-        ]);
+        ];
+
+        // Для developer и general_director city_id опционально (могут выбрать любой)
+        // Для остальных - опционально, но если указан - проверяем доступ
+        if ($user && $accessService) {
+            $rules['city_id'] = ['nullable', 'integer', 'exists:cities,city_id'];
+        }
+
+        return $request->validate($rules);
+    }
+
+    private function getAccessibleCities($user, $accessService)
+    {
+        if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+            // Все города
+            return \App\Models\City::orderBy('city_name')->get();
+        } elseif ($accessService->isRegionalDirector($user)) {
+            // Города своего региона
+            $region = $accessService->regionName($user);
+            if ($region) {
+                return \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+            }
+            return collect();
+        } elseif (($accessService->isBranchDirector($user) || $accessService->isManager($user)) && !empty($user->branch_id)) {
+            // Город своего филиала
+            $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+            if ($cityId) {
+                return \App\Models\City::where('city_id', $cityId)->get();
+            }
+            return collect();
+        }
+
+        return collect();
+    }
+
+    private function canAccessCity($user, $accessService, int $cityId): bool
+    {
+        if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+            return true;
+        } elseif ($accessService->isRegionalDirector($user)) {
+            $region = $accessService->regionName($user);
+            if ($region) {
+                return \App\Models\City::where('city_id', $cityId)
+                    ->where('region_name', $region)
+                    ->exists();
+            }
+            return false;
+        } elseif (($accessService->isBranchDirector($user) || $accessService->isManager($user)) && !empty($user->branch_id)) {
+            $userCityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+            return (int) $userCityId === $cityId;
+        }
+
+        return false;
     }
 }

@@ -13,6 +13,26 @@
 
     <div class="card-body">
         <div class="row g-3">
+            @if(isset($showCitySelect) && $showCitySelect && isset($cities) && $cities->isNotEmpty())
+                <div class="col-md-4">
+                    <label class="form-label">Город</label>
+                    <select class="form-select" name="city_id">
+                        <option value="">— выбрать —</option>
+                        @foreach($cities as $city)
+                            <option value="{{ $city->city_id }}" @selected(old('city_id')==$city->city_id)>
+                                {{ $city->city_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @elseif(isset($user) && (app(\App\Services\AccessService::class)->isManager($user) || app(\App\Services\AccessService::class)->isBranchDirector($user)))
+                <div class="col-md-4">
+                    <div class="alert alert-info mb-0">
+                        <small>Город будет автоматически привязан к вашему филиалу</small>
+                    </div>
+                </div>
+            @endif
+
             <div class="col-md-3">
                 <label class="form-label">Дата</label>
                 <input class="form-control" type="date" name="interview_date"

@@ -24,6 +24,29 @@
 <div class="vp-filter mb-3">
     <form method="GET" action="{{ route('module.route_actions') }}" class="vp-filter-form vp-filter-stack">
         <div class="vp-filter-fields">
+            @php
+                $showCityFilter = false;
+                $currentUser = $user ?? auth()->user();
+                if ($currentUser) {
+                    $accessService = app(\App\Services\AccessService::class);
+                    $showCityFilter = $accessService->isDeveloper($currentUser) || $accessService->isGeneralDirector($currentUser) || $accessService->isRegionalDirector($currentUser);
+                }
+            @endphp
+            @if($showCityFilter && $cities->isNotEmpty())
+                @php
+                    $selectedCity = $cities->firstWhere('city_id', request('city_id'));
+                @endphp
+                <div class="vp-filter-group vp-city-autocomplete">
+                    <input type="text" 
+                           class="form-control form-control-sm vp-city-input" 
+                           placeholder="Город" 
+                           value="{{ $selectedCity?->city_name ?? '' }}"
+                           autocomplete="off"
+                           data-cities='@json($cities->map(fn($c) => ['id' => $c->city_id, 'name' => $c->city_name]))'>
+                    <input type="hidden" name="city_id" class="vp-city-id" value="{{ request('city_id') }}">
+                    <div class="vp-city-autocomplete-dropdown"></div>
+                </div>
+            @endif
             <div class="vp-filter-group">
                 <span class="vp-filter-label">Дата</span>
                 <span class="vp-filter-inline">с</span>
@@ -189,33 +212,3 @@
     {{ $actions->links() }}
 </div>
 @endsection
-
-@push('scripts')
-<script>
-    document.querySelectorAll('[data-searchable-select]').forEach((input) => {
-        const targetId = input.getAttribute('data-hidden-target');
-        const hiddenInput = document.getElementById(targetId);
-        const listId = input.getAttribute('list');
-        const dataList = listId ? document.getElementById(listId) : null;
-        if (!hiddenInput || !dataList) {
-            return;
-        }
-
-        const options = Array.from(dataList.options);
-
-        const syncHidden = () => {
-            const value = input.value.trim().toLowerCase();
-            const match = options.find((option) => option.value.toLowerCase() === value);
-            hiddenInput.value = match ? match.dataset.id : '';
-        };
-
-        let timer;
-        input.addEventListener('input', () => {
-            clearTimeout(timer);
-            timer = setTimeout(syncHidden, 200);
-        });
-
-        input.addEventListener('change', syncHidden);
-    });
-</script>
-@endpush

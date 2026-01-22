@@ -18,6 +18,27 @@ class AdResidualsController extends Controller
         if ($user) {
             $accessService->scopeBranches($branchesQuery, $user);
         }
+        
+        // Фильтр по городу (для developer, general_director, regional_director)
+        $cityId = $request->input('city_id');
+        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            // Проверяем доступ к городу
+            if ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cityExists = \App\Models\City::where('city_id', $cityId)
+                        ->where('region_name', $region)
+                        ->exists();
+                    if ($cityExists) {
+                        $branchesQuery->where('city_id', $cityId);
+                    }
+                }
+            } else {
+                // Developer и General Director - любой город
+                $branchesQuery->where('city_id', $cityId);
+            }
+        }
+        
         $branches = $branchesQuery->orderBy('branch_name')->get();
         $branchIds = $branches->pluck('branch_id')->map(fn ($id) => (int) $id)->all();
 
@@ -58,7 +79,20 @@ class AdResidualsController extends Controller
             $residual->calculated_remaining = self::calculateRemaining($residual->branch_id, $residual->ad_type);
         }
 
-        return view('ad_residuals.index', compact('residuals', 'branches'));
+        // Получаем доступные города для фильтра
+        $cities = collect();
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+                $cities = \App\Models\City::orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                }
+            }
+        }
+
+        return view('ad_residuals.index', compact('residuals', 'branches', 'cities', 'user'));
     }
 
     public function create(AccessService $accessService)

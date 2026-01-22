@@ -14,6 +14,21 @@
 
     <div class="card-body">
         <div class="row g-3">
+            @if(isset($user) && app(\App\Services\AccessService::class)->isDeveloper($user) && isset($cities))
+                <div class="col-md-4">
+                    <label class="form-label">Город <span class="text-danger">*</span></label>
+                    <select class="form-select" name="city_id" required>
+                        <option value="">— выбрать —</option>
+                        @foreach($cities as $city)
+                            <option value="{{ $city->city_id }}" @selected(old('city_id', $salaryAdjustment->city_id)==$city->city_id)>
+                                {{ $city->city_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">Укажите город, к которому относится корректировка</small>
+                </div>
+            @endif
+            
             <div class="col-md-4">
                 <label class="form-label">Промоутер</label>
                 <select class="form-select" name="promoter_id" required>

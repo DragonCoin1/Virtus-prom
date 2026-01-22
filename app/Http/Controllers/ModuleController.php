@@ -13,47 +13,38 @@ class ModuleController extends Controller
     {
         $user = $request->user();
         
-        // Сначала получаем доступные route_id через route_actions -> promoter -> branch
-        $accessibleRouteIds = null;
-        if ($user && !$accessService->isFullAccess($user)) {
-            $routeIdsQuery = DB::table('route_actions')
-                ->select('route_actions.route_id')
-                ->distinct()
-                ->join('promoters', 'route_actions.promoter_id', '=', 'promoters.promoter_id');
+        // Менеджеры и директора филиалов видят только маршруты своего города
+        $cityFilter = null;
+        if ($user && ($accessService->isManager($user) || $accessService->isBranchDirector($user)) && !empty($user->branch_id)) {
+            $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+            if ($cityId) {
+                $cityFilter = $cityId;
+            }
+        }
 
+        // Фильтр по городу из запроса (для developer, general_director, regional_director)
+        $cityId = $request->input('city_id');
+        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            // Проверяем доступ к городу
             if ($accessService->isRegionalDirector($user)) {
                 $region = $accessService->regionName($user);
                 if ($region) {
-                    $routeIdsQuery->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
-                        ->join('cities', 'branches.city_id', '=', 'cities.city_id')
-                        ->where('cities.region_name', $region);
-                } else {
-                    $accessibleRouteIds = [];
+                    $cityExists = \App\Models\City::where('city_id', $cityId)
+                        ->where('region_name', $region)
+                        ->exists();
+                    if ($cityExists) {
+                        $cityFilter = $cityId;
+                    }
                 }
-            } elseif ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
-                $routeIdsQuery->where('promoters.branch_id', $user->branch_id);
             } else {
-                $accessibleRouteIds = [];
-            }
-
-            if ($accessibleRouteIds === null) {
-                $accessibleRouteIds = $routeIdsQuery->pluck('route_id')->toArray();
+                // Developer и General Director - любой город
+                $cityFilter = $cityId;
             }
         }
-
+        
         $lastActionsSub = DB::table('route_actions')
             ->select('route_id', DB::raw('MAX(action_date) as last_action_date'))
             ->groupBy('route_id');
-
-        // Если есть фильтрация по route_id, применяем её к подзапросу
-        if ($accessibleRouteIds !== null) {
-            if (empty($accessibleRouteIds)) {
-                // Нет доступных маршрутов
-                $lastActionsSub->whereRaw('1=0');
-            } else {
-                $lastActionsSub->whereIn('route_id', $accessibleRouteIds);
-            }
-        }
 
         $q = DB::table('routes as r')
             ->leftJoinSub($lastActionsSub, 'ra', function ($join) {
@@ -69,12 +60,21 @@ class ModuleController extends Controller
                 'ra.last_action_date',
             ]);
 
-        // Фильтрация routes по доступу
-        if ($accessibleRouteIds !== null) {
-            if (empty($accessibleRouteIds)) {
-                $q->whereRaw('1=0');
+        // Фильтрация для менеджеров - только их город
+        if ($cityFilter !== null) {
+            $hasCityId = \Illuminate\Support\Facades\Schema::hasColumn('routes', 'city_id');
+            if ($hasCityId) {
+                $q->where('r.city_id', $cityFilter);
             } else {
-                $q->whereIn('r.route_id', $accessibleRouteIds);
+                // Если столбца еще нет, фильтруем через route_actions -> promoter -> branch
+                $q->whereExists(function ($query) use ($cityFilter) {
+                    $query->select(DB::raw(1))
+                        ->from('route_actions as ra_filter')
+                        ->join('promoters as p_filter', 'ra_filter.promoter_id', '=', 'p_filter.promoter_id')
+                        ->join('branches as b_filter', 'p_filter.branch_id', '=', 'b_filter.branch_id')
+                        ->whereColumn('ra_filter.route_id', 'r.route_id')
+                        ->where('b_filter.city_id', $cityFilter);
+                });
             }
         }
 
@@ -90,6 +90,19 @@ class ModuleController extends Controller
             ->orderBy('r.route_code', 'asc');
 
         $routes = $q->paginate(80)->withQueryString();
+
+        // Получаем доступные города для фильтра
+        $cities = collect();
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+                $cities = \App\Models\City::orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                }
+            }
+        }
 
         $now = Carbon::now();
 
@@ -118,7 +131,7 @@ class ModuleController extends Controller
             return $route;
         });
 
-        return view('modules.cards', compact('routes'));
+        return view('modules.cards', compact('routes', 'cities', 'user'));
     }
 
     public function interviews()

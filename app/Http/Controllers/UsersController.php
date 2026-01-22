@@ -20,6 +20,26 @@ class UsersController extends Controller
             $accessService->scopeUsers($usersQuery, $user);
         }
 
+        // Фильтр по городу (для developer, general_director, regional_director)
+        $cityId = $request->input('city_id');
+        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            // Проверяем доступ к городу
+            if ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cityExists = \App\Models\City::where('city_id', $cityId)
+                        ->where('region_name', $region)
+                        ->exists();
+                    if ($cityExists) {
+                        $usersQuery->where('city_id', $cityId);
+                    }
+                }
+            } else {
+                // Developer и General Director - любой город
+                $usersQuery->where('city_id', $cityId);
+            }
+        }
+
         $users = $usersQuery
             ->orderBy('user_full_name')
             ->paginate(20)
@@ -31,7 +51,20 @@ class UsersController extends Controller
         $currentUser = $user ?? auth()->user();
         $canManageUsers = $currentUser ? !$accessService->isPromoter($currentUser) : false;
 
-        return view('users.index', compact('users', 'roles', 'canManageUsers'));
+        // Получаем доступные города для фильтра
+        $cities = collect();
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+                $cities = \App\Models\City::orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                }
+            }
+        }
+
+        return view('users.index', compact('users', 'roles', 'canManageUsers', 'cities', 'user'));
     }
 
     public function create(Request $request, AccessService $accessService)

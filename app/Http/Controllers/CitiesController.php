@@ -110,13 +110,6 @@ class CitiesController extends Controller
                 $population = isset($map['population']) ? $this->normalizeInteger($row[$map['population']] ?? null) : null;
                 $isActive = isset($map['is_active']) ? $this->normalizeBoolean($row[$map['is_active']] ?? null) : true;
 
-                // Правило "города РФ 300k+"
-                if ($population !== null && $population < 300000) {
-                    $skipped++;
-                    $errors[] = "Город '{$cityName}' пропущен: население {$population} < 300000";
-                    continue;
-                }
-
                 City::updateOrCreate(
                     ['city_name' => $cityName],
                     [
@@ -180,13 +173,6 @@ class CitiesController extends Controller
                 $regionName = isset($item['region_name']) ? trim($item['region_name']) : null;
                 $population = isset($item['population']) ? $this->normalizeInteger($item['population']) : null;
                 $isActive = isset($item['is_active']) ? $this->normalizeBoolean($item['is_active']) : true;
-
-                // Правило "города РФ 300k+"
-                if ($population !== null && $population < 300000) {
-                    $skipped++;
-                    $errors[] = "Город '{$cityName}' пропущен: население {$population} < 300000";
-                    continue;
-                }
 
                 City::updateOrCreate(
                     ['city_name' => $cityName],

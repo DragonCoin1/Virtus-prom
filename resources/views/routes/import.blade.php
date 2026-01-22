@@ -53,6 +53,33 @@
 <form method="POST" action="{{ route('routes.import') }}" enctype="multipart/form-data" class="card">
     @csrf
     <div class="card-body">
+        @php
+            $showCitySelect = false;
+            if ($user ?? false) {
+                $accessService = app(\App\Services\AccessService::class);
+                $showCitySelect = $accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user);
+            }
+        @endphp
+        @if($showCitySelect && $cities->isNotEmpty())
+            @php
+                $selectedCity = $cities->firstWhere('city_id', old('city_id'));
+            @endphp
+            <div class="mb-3">
+                <label class="form-label">Город <span class="text-danger">*</span></label>
+                <div class="vp-city-autocomplete">
+                    <input type="text" 
+                           class="form-control vp-city-input" 
+                           placeholder="Город" 
+                           value="{{ $selectedCity?->city_name ?? '' }}"
+                           autocomplete="off"
+                           required
+                           data-cities='@json($cities->map(fn($c) => ['id' => $c->city_id, 'name' => $c->city_name]))'>
+                    <input type="hidden" name="city_id" class="vp-city-id" value="{{ old('city_id') }}" required>
+                    <div class="vp-city-autocomplete-dropdown"></div>
+                </div>
+                <div class="form-text">Все импортируемые маршруты будут привязаны к выбранному городу</div>
+            </div>
+        @endif
         <div class="mb-3">
             <label class="form-label">Тип файла</label>
             <select class="form-select" name="file_type" required>

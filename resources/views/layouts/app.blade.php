@@ -123,5 +123,287 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 @stack('scripts')
+
+<script>
+    // Скрипт для поиска по городам и другим полям с datalist
+    document.querySelectorAll('[data-searchable-select]').forEach((input) => {
+        const targetId = input.getAttribute('data-hidden-target');
+        const hiddenInput = document.getElementById(targetId);
+        const listId = input.getAttribute('list');
+        const dataList = listId ? document.getElementById(listId) : null;
+        if (!hiddenInput || !dataList) {
+            return;
+        }
+
+        const options = Array.from(dataList.options);
+
+        const syncHidden = () => {
+            const value = input.value.trim().toLowerCase();
+            const match = options.find((option) => option.value.toLowerCase() === value);
+            hiddenInput.value = match ? match.dataset.id : '';
+        };
+
+        let timer;
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            timer = setTimeout(syncHidden, 200);
+        });
+
+        input.addEventListener('change', syncHidden);
+    });
+
+    // City autocomplete
+    document.querySelectorAll('.vp-city-autocomplete').forEach((container) => {
+        const input = container.querySelector('.vp-city-input');
+        const hiddenInput = container.querySelector('.vp-city-id');
+        const dropdown = container.querySelector('.vp-city-autocomplete-dropdown');
+        
+        if (!input || !hiddenInput || !dropdown) {
+            return;
+        }
+        
+        const citiesDataStr = input.getAttribute('data-cities');
+        if (!citiesDataStr) {
+            return;
+        }
+        
+        let citiesData = [];
+        try {
+            citiesData = JSON.parse(citiesDataStr);
+        } catch (e) {
+            console.error('Ошибка парсинга данных городов:', e);
+            return;
+        }
+        
+        let highlightedIndex = -1;
+        let isDropdownOpen = false;
+
+        const updateDropdownPosition = () => {
+            if (!isDropdownOpen) return;
+            
+            const rect = input.getBoundingClientRect();
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+            
+            // Позиционируем сразу под input, без отступа
+            dropdown.style.top = (rect.bottom + scrollTop) + 'px';
+            dropdown.style.left = (rect.left + scrollLeft) + 'px';
+            dropdown.style.width = Math.max(rect.width, 200) + 'px';
+        };
+
+        const renderDropdown = (filteredCities) => {
+            dropdown.innerHTML = '';
+            
+            // Добавляем опцию "Все города" в начало
+            const allCitiesItem = document.createElement('div');
+            allCitiesItem.className = 'vp-city-autocomplete-item';
+            if (!hiddenInput.value || hiddenInput.value === '') {
+                allCitiesItem.classList.add('selected');
+            }
+            allCitiesItem.textContent = 'Все города';
+            allCitiesItem.dataset.cityId = '';
+            allCitiesItem.dataset.cityName = '';
+            
+            allCitiesItem.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
+            allCitiesItem.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                input.value = '';
+                hiddenInput.value = '';
+                closeDropdown();
+                const form = input.closest('form');
+                if (form && form.id === 'cardsCityFilter') {
+                    setTimeout(() => form.submit(), 10);
+                }
+            });
+
+            allCitiesItem.addEventListener('mouseenter', () => {
+                highlightedIndex = -1;
+                updateHighlight();
+            });
+
+            dropdown.appendChild(allCitiesItem);
+
+            if (filteredCities.length === 0) {
+                showDropdown();
+                return;
+            }
+
+            filteredCities.forEach((city, index) => {
+                const item = document.createElement('div');
+                item.className = 'vp-city-autocomplete-item';
+                if (city.id == hiddenInput.value) {
+                    item.classList.add('selected');
+                }
+                item.textContent = city.name;
+                item.dataset.cityId = city.id;
+                item.dataset.cityName = city.name;
+                
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    input.value = city.name;
+                    hiddenInput.value = city.id;
+                    closeDropdown();
+                    const form = input.closest('form');
+                    if (form && form.id === 'cardsCityFilter') {
+                        setTimeout(() => form.submit(), 10);
+                    }
+                });
+
+                item.addEventListener('mouseenter', () => {
+                    highlightedIndex = index + 1; // +1 потому что первый элемент "Все города"
+                    updateHighlight();
+                });
+
+                dropdown.appendChild(item);
+            });
+
+            showDropdown();
+            highlightedIndex = -1;
+        };
+        
+        const showDropdown = () => {
+            isDropdownOpen = true;
+            dropdown.classList.add('show');
+            updateDropdownPosition();
+        };
+        
+        const closeDropdown = () => {
+            isDropdownOpen = false;
+            dropdown.classList.remove('show');
+            highlightedIndex = -1;
+        };
+
+        const updateHighlight = () => {
+            const items = dropdown.querySelectorAll('.vp-city-autocomplete-item');
+            items.forEach((item, index) => {
+                // highlightedIndex = -1 для "Все города", 0+ для остальных
+                const isHighlighted = highlightedIndex === -1 ? index === 0 : index === highlightedIndex;
+                item.classList.toggle('highlighted', isHighlighted);
+            });
+        };
+
+        const filterCities = (query) => {
+            if (!query.trim()) {
+                return citiesData;
+            }
+            const lowerQuery = query.toLowerCase();
+            return citiesData.filter(city => 
+                city.name.toLowerCase().includes(lowerQuery)
+            );
+        };
+
+        input.addEventListener('input', (e) => {
+            const query = e.target.value;
+            const filtered = filterCities(query);
+            updateDropdownPosition();
+            renderDropdown(filtered);
+            
+            // Если точное совпадение, устанавливаем ID
+            const exactMatch = citiesData.find(c => c.name.toLowerCase() === query.toLowerCase());
+            if (exactMatch) {
+                hiddenInput.value = exactMatch.id;
+            } else {
+                hiddenInput.value = '';
+            }
+        });
+
+        input.addEventListener('focus', () => {
+            const query = input.value;
+            const filtered = filterCities(query);
+            updateDropdownPosition();
+            renderDropdown(filtered);
+        });
+
+        input.addEventListener('keydown', (e) => {
+            const items = dropdown.querySelectorAll('.vp-city-autocomplete-item');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (!isDropdownOpen) {
+                    const query = input.value;
+                    const filtered = filterCities(query);
+                    renderDropdown(filtered);
+                }
+                if (items.length > 0) {
+                    highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+                    updateHighlight();
+                    if (highlightedIndex >= 0 && items[highlightedIndex]) {
+                        items[highlightedIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (items.length > 0) {
+                    highlightedIndex = Math.max(highlightedIndex - 1, -1);
+                    updateHighlight();
+                    if (highlightedIndex >= 0 && items[highlightedIndex]) {
+                        items[highlightedIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (items.length > 0) {
+                    if (highlightedIndex >= 0 && items[highlightedIndex]) {
+                        items[highlightedIndex].click();
+                    } else if (highlightedIndex === -1 && items[0]) {
+                        // Если ничего не выделено, выбираем первый элемент (Все города)
+                        items[0].click();
+                    }
+                }
+            } else if (e.key === 'Escape') {
+                closeDropdown();
+            }
+        });
+
+        // Обновление позиции при скролле
+        let scrollTimeout;
+        const handleScroll = () => {
+            if (isDropdownOpen) {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(() => {
+                    updateDropdownPosition();
+                }, 10);
+            }
+        };
+        
+        window.addEventListener('scroll', handleScroll, true);
+        window.addEventListener('resize', () => {
+            if (isDropdownOpen) {
+                updateDropdownPosition();
+            }
+        });
+
+        // Закрытие при клике вне
+        const handleDocumentClick = (e) => {
+            if (!container.contains(e.target) && !dropdown.contains(e.target)) {
+                closeDropdown();
+            }
+        };
+        
+        // Используем capture phase для более надежного закрытия
+        document.addEventListener('mousedown', handleDocumentClick, true);
+        
+        // Очистка при удалении элемента
+        const observer = new MutationObserver(() => {
+            if (!document.body.contains(container)) {
+                window.removeEventListener('scroll', handleScroll, true);
+                document.removeEventListener('mousedown', handleDocumentClick, true);
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    });
+</script>
 </body>
 </html>

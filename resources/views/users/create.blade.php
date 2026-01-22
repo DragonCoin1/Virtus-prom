@@ -42,12 +42,19 @@
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label">Город</label>
-                <select name="city_id" class="form-select">
-                    <option value="">—</option>
-                    @foreach($cities as $city)
-                        <option value="{{ $city->city_id }}" {{ (string) old('city_id') === (string) $city->city_id ? 'selected' : '' }}>{{ $city->city_name }}</option>
-                    @endforeach
-                </select>
+                @php
+                    $selectedCity = $cities->firstWhere('city_id', old('city_id'));
+                @endphp
+                <div class="vp-city-autocomplete">
+                    <input type="text" 
+                           class="form-control vp-city-input" 
+                           placeholder="Город" 
+                           value="{{ $selectedCity?->city_name ?? '' }}"
+                           autocomplete="off"
+                           data-cities='@json($cities->map(fn($c) => ['id' => $c->city_id, 'name' => $c->city_name]))'>
+                    <input type="hidden" name="city_id" class="vp-city-id" value="{{ old('city_id') }}">
+                    <div class="vp-city-autocomplete-dropdown"></div>
+                </div>
             </div>
             <div class="col-md-6 mb-3">
                 <label class="form-label">Филиал</label>

@@ -15,6 +15,40 @@
         <div class="alert alert-success">{{ session('ok') }}</div>
     @endif
 
+    @php
+        $showCityFilter = false;
+        if ($user ?? false) {
+            $accessService = app(\App\Services\AccessService::class);
+            $showCityFilter = $accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user);
+        }
+    @endphp
+    @if($showCityFilter && ($cities ?? collect())->isNotEmpty())
+        @php
+            $selectedCity = $cities->firstWhere('city_id', request('city_id'));
+        @endphp
+        <form class="mb-3" method="GET" action="{{ route('users.index') }}">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label">Город</label>
+                    <div class="vp-city-autocomplete">
+                        <input type="text" 
+                               class="form-control form-control-sm vp-city-input" 
+                               placeholder="Город" 
+                               value="{{ $selectedCity?->city_name ?? '' }}"
+                               autocomplete="off"
+                               data-cities='@json($cities->map(fn($c) => ['id' => $c->city_id, 'name' => $c->city_name]))'>
+                        <input type="hidden" name="city_id" class="vp-city-id" value="{{ request('city_id') }}">
+                        <div class="vp-city-autocomplete-dropdown"></div>
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-outline-primary btn-sm">Показать</button>
+                    <a class="btn btn-outline-secondary btn-sm ms-2" href="{{ route('users.index') }}">Сброс</a>
+                </div>
+            </div>
+        </form>
+    @endif
+
     <div class="table-responsive">
         <table class="table table-striped align-middle">
             <thead>

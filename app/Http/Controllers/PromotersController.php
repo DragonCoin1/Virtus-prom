@@ -18,6 +18,30 @@ class PromotersController extends Controller
             $accessService->scopePromoters($q, $user);
         }
 
+        // Фильтр по городу (для developer, general_director, regional_director)
+        $cityId = $request->input('city_id');
+        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            // Проверяем доступ к городу
+            if ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cityExists = \App\Models\City::where('city_id', $cityId)
+                        ->where('region_name', $region)
+                        ->exists();
+                    if ($cityExists) {
+                        $q->whereHas('branch', function ($query) use ($cityId) {
+                            $query->where('city_id', $cityId);
+                        });
+                    }
+                }
+            } else {
+                // Developer и General Director - любой город
+                $q->whereHas('branch', function ($query) use ($cityId) {
+                    $query->where('city_id', $cityId);
+                });
+            }
+        }
+
         // Поиск (ФИО + телефон)
         $search = $request->input('search', $request->input('q'));
         if (!empty($search)) {
@@ -44,7 +68,20 @@ class PromotersController extends Controller
 
         $promoters = $q->paginate(30)->appends($request->query());
 
-        return view('promoters.index', compact('promoters'));
+        // Получаем доступные города для фильтра
+        $cities = collect();
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+                $cities = \App\Models\City::orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                }
+            }
+        }
+
+        return view('promoters.index', compact('promoters', 'cities', 'user'));
     }
 
     public function create(AccessService $accessService)

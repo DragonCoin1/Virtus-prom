@@ -14,18 +14,14 @@
     <h3 class="mb-0">Карты</h3>
     <div class="vp-toolbar-actions">
         @php
-            // Для developer всегда показываем кнопки
+            // Проверяем права через canAccessModule
             $canManageRoutes = false;
             $canViewTemplates = false;
             if (auth()->check()) {
                 $accessService = app(\App\Services\AccessService::class);
-                if ($accessService->isDeveloper(auth()->user())) {
-                    $canManageRoutes = true;
-                    $canViewTemplates = true;
-                } else {
-                    $canManageRoutes = !empty($canEditModules['routes']);
-                    $canViewTemplates = !empty($canViewModules['ad_templates']);
-                }
+                $user = auth()->user();
+                $canManageRoutes = $accessService->canAccessModule($user, 'routes', 'edit');
+                $canViewTemplates = $accessService->canAccessModule($user, 'ad_templates', 'view');
             }
         @endphp
         @if($canManageRoutes)
@@ -40,6 +36,40 @@
 
 @if(session('ok'))
     <div class="alert alert-success">{{ session('ok') }}</div>
+@endif
+
+@php
+    $showCityFilter = false;
+    $currentUser = $user ?? auth()->user();
+    if ($currentUser) {
+        $accessService = app(\App\Services\AccessService::class);
+        $showCityFilter = $accessService->isDeveloper($currentUser) || $accessService->isGeneralDirector($currentUser) || $accessService->isRegionalDirector($currentUser);
+    }
+@endphp
+
+@if($showCityFilter && $cities->isNotEmpty())
+    @php
+        $selectedCity = $cities->firstWhere('city_id', request('city_id'));
+    @endphp
+    <div class="card mb-3">
+        <div class="card-body">
+            <form class="vp-filter vp-filter-compact vp-filter-stack" method="GET" action="{{ route('module.cards') }}" id="cardsCityFilter">
+                <div class="vp-filter-fields">
+                    <div class="vp-filter-group vp-city-autocomplete">
+                        <input type="text" 
+                               class="form-control form-control-sm vp-city-input" 
+                               placeholder="Город" 
+                               value="{{ $selectedCity?->city_name ?? '' }}"
+                               autocomplete="off"
+                               data-cities='@json($cities->map(fn($c) => ['id' => $c->city_id, 'name' => $c->city_name]))'
+                               onchange="document.getElementById('cardsCityFilter').submit()">
+                        <input type="hidden" name="city_id" class="vp-city-id" value="{{ request('city_id') }}">
+                        <div class="vp-city-autocomplete-dropdown"></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 @endif
 
 <div class="card">

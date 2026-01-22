@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SalaryAdjustment extends Model
 {
@@ -11,6 +12,7 @@ class SalaryAdjustment extends Model
 
     protected $fillable = [
         'promoter_id',
+        'city_id',
         'adj_date',
         'amount',
         'comment',
@@ -25,5 +27,10 @@ class SalaryAdjustment extends Model
     public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by', 'id');
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'city_id', 'city_id');
     }
 }

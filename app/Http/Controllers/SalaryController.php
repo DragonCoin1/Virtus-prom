@@ -21,6 +21,16 @@ class SalaryController extends Controller
         $promoters = $promotersQuery->get();
         $promoterIds = $promoters->pluck('promoter_id')->map(fn ($id) => (int) $id)->all();
 
+        // Фильтр по городу (для developer, general_director, regional_director)
+        $cityId = $request->input('city_id');
+        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            // Фильтруем промоутеров по городу
+            $promoters = $promoters->filter(function ($promoter) use ($cityId) {
+                return $promoter->branch && $promoter->branch->city_id == $cityId;
+            });
+            $promoterIds = $promoters->pluck('promoter_id')->map(fn ($id) => (int) $id)->all();
+        }
+
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
         $promoterId = $request->input('promoter_id');
@@ -55,6 +65,46 @@ class SalaryController extends Controller
             ->keyBy('promoter_id');
 
         $adjQ = SalaryAdjustment::query();
+
+        // Фильтрация корректировок по городу для менеджеров
+        // Проверяем наличие столбца city_id перед фильтрацией
+        $hasCityId = \Illuminate\Support\Facades\Schema::hasColumn('salary_adjustments', 'city_id');
+        
+        if ($hasCityId) {
+            if ($user && $accessService->isManager($user) && !empty($user->branch_id)) {
+                $userCityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+                if ($userCityId) {
+                    $adjQ->where('city_id', $userCityId);
+                } else {
+                    $adjQ->whereRaw('1=0');
+                }
+            } elseif ($user && $accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $adjQ->whereHas('city', function ($query) use ($region) {
+                        $query->where('region_name', $region);
+                    });
+                } else {
+                    $adjQ->whereRaw('1=0');
+                }
+            }
+        } else {
+            // Если столбца нет, фильтруем через промоутера
+            if ($user && $accessService->isManager($user) && !empty($user->branch_id)) {
+                $adjQ->whereHas('promoter', function ($query) use ($user) {
+                    $query->where('branch_id', $user->branch_id);
+                });
+            } elseif ($user && $accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $adjQ->whereHas('promoter.branch.city', function ($query) use ($region) {
+                        $query->where('region_name', $region);
+                    });
+                } else {
+                    $adjQ->whereRaw('1=0');
+                }
+            }
+        }
 
         if (empty($promoterIds)) {
             $adjQ->whereRaw('1=0');
@@ -122,11 +172,78 @@ class SalaryController extends Controller
                 ->value('can_edit') === 1;
         }
 
-        $lastAdjustments = SalaryAdjustment::with(['promoter', 'createdBy'])
+        // Фильтрация корректировок по городу для менеджеров
+        $hasCityId = \Illuminate\Support\Facades\Schema::hasColumn('salary_adjustments', 'city_id');
+        $lastAdjustmentsQuery = SalaryAdjustment::with(['promoter', 'createdBy']);
+        if ($hasCityId) {
+            $lastAdjustmentsQuery->with('city');
+        }
+        
+        if ($hasCityId) {
+            if ($user && $accessService->isManager($user) && !empty($user->branch_id)) {
+                // Менеджер видит только корректировки своего города
+                $userCityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+                if ($userCityId) {
+                    $lastAdjustmentsQuery->where('city_id', $userCityId);
+                } else {
+                    $lastAdjustmentsQuery->whereRaw('1=0');
+                }
+            } elseif ($user && $accessService->isRegionalDirector($user)) {
+                // Региональный директор видит корректировки своего региона
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $lastAdjustmentsQuery->whereHas('city', function ($query) use ($region) {
+                        $query->where('region_name', $region);
+                    });
+                } else {
+                    $lastAdjustmentsQuery->whereRaw('1=0');
+                }
+            } elseif ($user && $accessService->isBranchScoped($user) && !empty($user->branch_id)) {
+                // Остальные с ограничением по филиалу - через промоутера
+                $lastAdjustmentsQuery->whereHas('promoter', function ($query) use ($user) {
+                    $query->where('branch_id', $user->branch_id);
+                });
+            }
+        } else {
+            // Если столбца нет, фильтруем через промоутера
+            if ($user && $accessService->isManager($user) && !empty($user->branch_id)) {
+                $lastAdjustmentsQuery->whereHas('promoter', function ($query) use ($user) {
+                    $query->where('branch_id', $user->branch_id);
+                });
+            } elseif ($user && $accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $lastAdjustmentsQuery->whereHas('promoter.branch.city', function ($query) use ($region) {
+                        $query->where('region_name', $region);
+                    });
+                } else {
+                    $lastAdjustmentsQuery->whereRaw('1=0');
+                }
+            } elseif ($user && $accessService->isBranchScoped($user) && !empty($user->branch_id)) {
+                $lastAdjustmentsQuery->whereHas('promoter', function ($query) use ($user) {
+                    $query->where('branch_id', $user->branch_id);
+                });
+            }
+        }
+        
+        $lastAdjustments = $lastAdjustmentsQuery
             ->orderByDesc('adj_date')
             ->orderByDesc('salary_adjustment_id')
             ->limit(50)
             ->get();
+
+        // Получаем доступные города для фильтра
+        $cities = collect();
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+                $cities = \App\Models\City::orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                }
+            }
+        }
 
         return view('salary.index', compact(
             'promoters',
@@ -135,7 +252,9 @@ class SalaryController extends Controller
             'totalAdj',
             'totalFinal',
             'canEdit',
-            'lastAdjustments'
+            'lastAdjustments',
+            'cities',
+            'user'
         ));
     }
 
@@ -148,26 +267,55 @@ class SalaryController extends Controller
             $accessService->scopePromoters($promotersQuery, $user);
         }
         $promoters = $promotersQuery->get();
-        return view('salary.adjustment_create', compact('promoters'));
+        
+        // Для девелопера показываем все города для выбора
+        $cities = collect();
+        if ($user && $accessService->isDeveloper($user)) {
+            $cities = \App\Models\City::orderBy('city_name')->get();
+        }
+        
+        return view('salary.adjustment_create', compact('promoters', 'cities', 'user'));
     }
 
     public function storeAdjustment(Request $request, AccessService $accessService)
     {
         $this->assertSalaryEditAccess($accessService);
-        $data = $request->validate([
+        $user = $request->user();
+        
+        $validationRules = [
             'promoter_id' => ['required', 'integer', 'exists:promoters,promoter_id'],
             'adj_date' => ['required', 'date'],
             'amount' => ['required', 'integer'],
             'comment' => ['nullable', 'string', 'max:255'],
-        ]);
+        ];
+        
+        // Для девелопера city_id обязателен
+        if ($user && $accessService->isDeveloper($user)) {
+            $validationRules['city_id'] = ['required', 'integer', 'exists:cities,city_id'];
+        }
+        
+        $data = $request->validate($validationRules);
 
-        $user = $request->user();
         if ($user && !$accessService->canAccessPromoterId($user, (int) $data['promoter_id'])) {
             abort(403, 'Нет доступа к промоутеру');
         }
 
+        // Определяем city_id
+        $cityId = null;
+        if ($user && $accessService->isDeveloper($user)) {
+            // Девелопер указывает город явно
+            $cityId = (int) $data['city_id'];
+        } else {
+            // Для остальных - берем город из филиала промоутера
+            $promoter = Promoter::find((int) $data['promoter_id']);
+            if ($promoter && $promoter->branch_id) {
+                $cityId = \App\Models\Branch::where('branch_id', $promoter->branch_id)->value('city_id');
+            }
+        }
+
         SalaryAdjustment::create([
             'promoter_id' => (int)$data['promoter_id'],
+            'city_id' => $cityId,
             'adj_date' => $data['adj_date'],
             'amount' => (int)$data['amount'],
             'comment' => $data['comment'] ?? null,
@@ -180,7 +328,7 @@ class SalaryController extends Controller
     public function editAdjustment(SalaryAdjustment $salaryAdjustment, AccessService $accessService)
     {
         $this->assertSalaryEditAccess($accessService);
-        $salaryAdjustment->load('promoter');
+        $salaryAdjustment->load('promoter', 'city');
         $user = auth()->user();
         if ($user && !$accessService->canAccessPromoter($user, $salaryAdjustment->promoter)) {
             abort(403, 'Нет доступа к промоутеру');
@@ -191,27 +339,55 @@ class SalaryController extends Controller
             $accessService->scopePromoters($promotersQuery, $user);
         }
         $promoters = $promotersQuery->get();
+        
+        // Для девелопера показываем все города для выбора
+        $cities = collect();
+        if ($user && $accessService->isDeveloper($user)) {
+            $cities = \App\Models\City::orderBy('city_name')->get();
+        }
 
-        return view('salary.adjustment_edit', compact('promoters', 'salaryAdjustment'));
+        return view('salary.adjustment_edit', compact('promoters', 'salaryAdjustment', 'cities', 'user'));
     }
 
     public function updateAdjustment(Request $request, SalaryAdjustment $salaryAdjustment, AccessService $accessService)
     {
         $this->assertSalaryEditAccess($accessService);
-        $data = $request->validate([
+        $user = $request->user();
+        
+        $validationRules = [
             'promoter_id' => ['required', 'integer', 'exists:promoters,promoter_id'],
             'adj_date' => ['required', 'date'],
             'amount' => ['required', 'integer'],
             'comment' => ['nullable', 'string', 'max:255'],
-        ]);
+        ];
+        
+        // Для девелопера city_id обязателен
+        if ($user && $accessService->isDeveloper($user)) {
+            $validationRules['city_id'] = ['required', 'integer', 'exists:cities,city_id'];
+        }
+        
+        $data = $request->validate($validationRules);
 
-        $user = $request->user();
         if ($user && !$accessService->canAccessPromoterId($user, (int) $data['promoter_id'])) {
             abort(403, 'Нет доступа к промоутеру');
         }
 
+        // Определяем city_id
+        $cityId = null;
+        if ($user && $accessService->isDeveloper($user)) {
+            // Девелопер указывает город явно
+            $cityId = (int) $data['city_id'];
+        } else {
+            // Для остальных - берем город из филиала промоутера
+            $promoter = Promoter::find((int) $data['promoter_id']);
+            if ($promoter && $promoter->branch_id) {
+                $cityId = \App\Models\Branch::where('branch_id', $promoter->branch_id)->value('city_id');
+            }
+        }
+
         $salaryAdjustment->update([
             'promoter_id' => (int)$data['promoter_id'],
+            'city_id' => $cityId,
             'adj_date' => $data['adj_date'],
             'amount' => (int)$data['amount'],
             'comment' => $data['comment'] ?? null,

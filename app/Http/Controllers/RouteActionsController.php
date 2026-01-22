@@ -34,6 +34,30 @@ class RouteActionsController extends Controller
             $accessService->scopeRouteActions($q, $user);
         }
 
+        // Фильтр по городу (для developer, general_director, regional_director)
+        $cityId = $request->input('city_id');
+        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            // Проверяем доступ к городу
+            if ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cityExists = \App\Models\City::where('city_id', $cityId)
+                        ->where('region_name', $region)
+                        ->exists();
+                    if ($cityExists) {
+                        $q->whereHas('promoter.branch', function ($query) use ($cityId) {
+                            $query->where('city_id', $cityId);
+                        });
+                    }
+                }
+            } else {
+                // Developer и General Director - любой город
+                $q->whereHas('promoter.branch', function ($query) use ($cityId) {
+                    $query->where('city_id', $cityId);
+                });
+            }
+        }
+
         $hasFilters = false;
 
         if ($request->filled('date_from')) {
@@ -82,13 +106,28 @@ class RouteActionsController extends Controller
                 ->value('can_edit') === 1;
         }
 
+        // Получаем доступные города для фильтра
+        $cities = collect();
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+                $cities = \App\Models\City::orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                }
+            }
+        }
+
         return view('route_actions.index', compact(
             'actions',
             'promoters',
             'routes',
             'sumPayment',
             'hasFilters',
-            'canEdit'
+            'canEdit',
+            'cities',
+            'user'
         ));
     }
 

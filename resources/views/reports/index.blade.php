@@ -72,6 +72,32 @@
         <form class="vp-filter vp-filter-compact vp-filter-stack" method="GET" action="{{ route('reports.index') }}">
             <div class="vp-filter-fields">
                 <div class="row g-2 w-100">
+                    @php
+                        $showCityFilter = false;
+                        $currentUser = $user ?? auth()->user();
+                        if ($currentUser) {
+                            $accessService = app(\App\Services\AccessService::class);
+                            $showCityFilter = $accessService->isDeveloper($currentUser) || $accessService->isGeneralDirector($currentUser) || $accessService->isRegionalDirector($currentUser);
+                        }
+                    @endphp
+                    @if($showCityFilter && $cities->isNotEmpty())
+                        @php
+                            $selectedCity = $cities->firstWhere('city_id', request('city_id'));
+                        @endphp
+                        <div class="col-md-3">
+                            <label class="form-label">Город</label>
+                            <div class="vp-city-autocomplete">
+                                <input type="text" 
+                                       class="form-control form-control-sm vp-city-input" 
+                                       placeholder="Город" 
+                                       value="{{ $selectedCity?->city_name ?? '' }}"
+                                       autocomplete="off"
+                                       data-cities='@json($cities->map(fn($c) => ['id' => $c->city_id, 'name' => $c->city_name]))'>
+                                <input type="hidden" name="city_id" class="vp-city-id" value="{{ request('city_id') }}">
+                                <div class="vp-city-autocomplete-dropdown"></div>
+                            </div>
+                        </div>
+                    @endif
                     <div class="col-md-3">
                         <label class="form-label">Дата с</label>
                         <input type="date" class="form-control form-control-sm" name="date_from" value="{{ $dateFrom }}">

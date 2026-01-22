@@ -4,7 +4,7 @@
 @section('content')
 <h3 class="mb-3">Импорт городов (CSV/JSON)</h3>
 
-@if ($errors->any())
+@if (isset($errors) && is_object($errors) && $errors->any())
     <div class="alert alert-danger">{{ $errors->first() }}</div>
 @endif
 
@@ -32,11 +32,10 @@
             <div class="text-muted small mt-2">
                 <strong>city_name</strong> — название города (обязательно)<br>
                 <strong>region_name</strong> — название региона (необязательно)<br>
-                <strong>population</strong> — население (необязательно, но для импорта должно быть >= 300000)<br>
+                <strong>population</strong> — население (необязательно)<br>
                 <strong>is_active</strong> — активен ли город (1 или 0, по умолчанию 1)
             </div>
             <div class="text-muted small mt-2">
-                <strong>Правило:</strong> Импортируются только города РФ с населением >= 300 000 человек.<br>
                 Пример строки: <code>Москва;Москва;13010112;1</code>
             </div>
         </div>
@@ -58,9 +57,6 @@
     "is_active": true
   }
 ]</pre>
-            <div class="text-muted small mt-2">
-                <strong>Правило:</strong> Импортируются только города РФ с населением >= 300 000 человек.
-            </div>
         </div>
     </div>
 </div>

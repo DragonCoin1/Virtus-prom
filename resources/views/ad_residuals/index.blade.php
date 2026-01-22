@@ -27,8 +27,34 @@
         <div class="alert alert-success">{{ session('ok') }}</div>
     @endif
 
+    @php
+        $showCityFilter = false;
+        if ($user ?? false) {
+            $accessService = app(\App\Services\AccessService::class);
+            $showCityFilter = $accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user);
+        }
+    @endphp
     <form class="row g-2 mb-3" method="GET" action="{{ route('ad_residuals.index') }}">
+        @if($showCityFilter && ($cities ?? collect())->isNotEmpty())
+            @php
+                $selectedCity = $cities->firstWhere('city_id', request('city_id'));
+            @endphp
+            <div class="col-md-3">
+                <label class="form-label">Город</label>
+                <div class="vp-city-autocomplete">
+                    <input type="text" 
+                           class="form-control vp-city-input" 
+                           placeholder="Город" 
+                           value="{{ $selectedCity?->city_name ?? '' }}"
+                           autocomplete="off"
+                           data-cities='@json($cities->map(fn($c) => ['id' => $c->city_id, 'name' => $c->city_name]))'>
+                    <input type="hidden" name="city_id" class="vp-city-id" value="{{ request('city_id') }}">
+                    <div class="vp-city-autocomplete-dropdown"></div>
+                </div>
+            </div>
+        @endif
         <div class="col-md-3">
+            <label class="form-label">Филиал</label>
             <select class="form-select" name="branch_id">
                 <option value="">Все филиалы</option>
                 @foreach($branches as $branch)

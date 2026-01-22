@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Schema;
 
 class Interview extends Model
@@ -12,6 +13,7 @@ class Interview extends Model
 
     protected $fillable = [
         'interview_date',
+        'city_id',
         'candidate_name',
         'candidate_phone',
         'source',
@@ -37,5 +39,10 @@ class Interview extends Model
     public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by', 'id');
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class, 'city_id', 'city_id');
     }
 }

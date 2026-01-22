@@ -9,9 +9,10 @@ use Illuminate\Support\Facades\Schema;
 
 class ReportsController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, \App\Services\AccessService $accessService)
     {
         $now = Carbon::now();
+        $user = $request->user();
 
         // Фильтр по умолчанию: текущий месяц по сегодня
         $defaultFrom = $now->copy()->startOfMonth()->format('Y-m-d');
@@ -23,8 +24,64 @@ class ReportsController extends Controller
         $sort = $request->input('sort', 'desc'); // asc/desc
         $sort = ($sort === 'asc') ? 'asc' : 'desc';
 
+        // Фильтр по городу (для developer, general_director, regional_director)
+        $cityId = $request->input('city_id');
+        $cityFilter = null;
+        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            // Проверяем доступ к городу
+            if ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cityExists = \App\Models\City::where('city_id', $cityId)
+                        ->where('region_name', $region)
+                        ->exists();
+                    if ($cityExists) {
+                        $cityFilter = $cityId;
+                    }
+                }
+            } else {
+                // Developer и General Director - любой город
+                $cityFilter = $cityId;
+            }
+        }
+
+        // Фильтрация по доступу
         $dailyQ = DB::table('route_actions')
-            ->whereDate('action_date', '>=', $dateFrom)
+            ->join('promoters', 'route_actions.promoter_id', '=', 'promoters.promoter_id');
+            
+        if ($user && !$accessService->isFullAccess($user)) {
+            if ($accessService->isManager($user) && !empty($user->branch_id)) {
+                // Менеджер - только свой филиал
+                $dailyQ->where('promoters.branch_id', $user->branch_id);
+            } elseif ($accessService->isRegionalDirector($user)) {
+                // Региональный директор - свой регион
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    if ($cityFilter) {
+                        // Если выбран конкретный город - фильтруем по нему
+                        $dailyQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
+                            ->where('branches.city_id', $cityFilter);
+                    } else {
+                        $dailyQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
+                            ->join('cities', 'branches.city_id', '=', 'cities.city_id')
+                            ->where('cities.region_name', $region);
+                    }
+                } else {
+                    $dailyQ->whereRaw('1=0');
+                }
+            } elseif ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
+                // Остальные с ограничением по филиалу
+                $dailyQ->where('promoters.branch_id', $user->branch_id);
+            } else {
+                $dailyQ->whereRaw('1=0');
+            }
+        } elseif ($cityFilter && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user))) {
+            // Developer и General Director - фильтр по выбранному городу
+            $dailyQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
+                ->where('branches.city_id', $cityFilter);
+        }
+
+        $dailyQ->whereDate('action_date', '>=', $dateFrom)
             ->whereDate('action_date', '<=', $dateTo)
             ->groupBy('action_date')
             ->select([
@@ -67,11 +124,43 @@ class ReportsController extends Controller
                 $select[] = DB::raw('NULL as promoter_requisites');
             }
 
-            $promoterPayments = DB::table('route_actions')
+            $promoterPaymentsQ = DB::table('route_actions')
                 ->join('promoters', 'promoters.promoter_id', '=', 'route_actions.promoter_id')
                 ->whereDate('action_date', '>=', $dateFrom)
                 ->whereDate('action_date', '<=', $dateTo)
-                ->whereIn('action_date', $dailyDates)
+                ->whereIn('action_date', $dailyDates);
+                
+            // Фильтрация по доступу
+            if ($user && !$accessService->isFullAccess($user)) {
+                if ($accessService->isManager($user) && !empty($user->branch_id)) {
+                    $promoterPaymentsQ->where('promoters.branch_id', $user->branch_id);
+                } elseif ($accessService->isRegionalDirector($user)) {
+                    $region = $accessService->regionName($user);
+                    if ($region) {
+                        if ($cityFilter) {
+                            // Если выбран конкретный город - фильтруем по нему
+                            $promoterPaymentsQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
+                                ->where('branches.city_id', $cityFilter);
+                        } else {
+                            $promoterPaymentsQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
+                                ->join('cities', 'branches.city_id', '=', 'cities.city_id')
+                                ->where('cities.region_name', $region);
+                        }
+                    } else {
+                        $promoterPaymentsQ->whereRaw('1=0');
+                    }
+                } elseif ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
+                    $promoterPaymentsQ->where('promoters.branch_id', $user->branch_id);
+                } else {
+                    $promoterPaymentsQ->whereRaw('1=0');
+                }
+            } elseif ($cityFilter && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user))) {
+                // Developer и General Director - фильтр по выбранному городу
+                $promoterPaymentsQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
+                    ->where('branches.city_id', $cityFilter);
+            }
+            
+            $promoterPayments = $promoterPaymentsQ
                 ->groupBy($groupBy)
                 ->select($select)
                 ->orderBy('action_date', $sort)
@@ -83,10 +172,42 @@ class ReportsController extends Controller
         $monthFrom = $now->copy()->startOfMonth()->format('Y-m-d');
         $monthTo = $now->copy()->endOfMonth()->format('Y-m-d');
 
-        $m = DB::table('route_actions')
+        $monthQ = DB::table('route_actions')
+            ->join('promoters', 'route_actions.promoter_id', '=', 'promoters.promoter_id')
             ->whereDate('action_date', '>=', $monthFrom)
-            ->whereDate('action_date', '<=', $monthTo)
-            ->select([
+            ->whereDate('action_date', '<=', $monthTo);
+            
+        // Фильтрация по доступу
+        if ($user && !$accessService->isFullAccess($user)) {
+            if ($accessService->isManager($user) && !empty($user->branch_id)) {
+                $monthQ->where('promoters.branch_id', $user->branch_id);
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    if ($cityFilter) {
+                        // Если выбран конкретный город - фильтруем по нему
+                        $monthQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
+                            ->where('branches.city_id', $cityFilter);
+                    } else {
+                        $monthQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
+                            ->join('cities', 'branches.city_id', '=', 'cities.city_id')
+                            ->where('cities.region_name', $region);
+                    }
+                } else {
+                    $monthQ->whereRaw('1=0');
+                }
+            } elseif ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
+                $monthQ->where('promoters.branch_id', $user->branch_id);
+            } else {
+                $monthQ->whereRaw('1=0');
+            }
+        } elseif ($cityFilter && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user))) {
+            // Developer и General Director - фильтр по выбранному городу
+            $monthQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
+                ->where('branches.city_id', $cityFilter);
+        }
+        
+        $m = $monthQ->select([
                 DB::raw('SUM(leaflets_total) as sum_leaflets'),
                 DB::raw('SUM(boxes_done) as sum_boxes'),
                 DB::raw('SUM(posters_total) as sum_posters'),
@@ -124,6 +245,19 @@ class ReportsController extends Controller
             $priceLeaflet = round($month['payment'] / $month['leaflets'], 2);
         }
 
+        // Получаем доступные города для фильтра
+        $cities = collect();
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+                $cities = \App\Models\City::orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                }
+            }
+        }
+
         return view('reports.index', compact(
             'daily',
             'promoterPayments',
@@ -132,7 +266,9 @@ class ReportsController extends Controller
             'sort',
             'month',
             'priceBox',
-            'priceLeaflet'
+            'priceLeaflet',
+            'cities',
+            'user'
         ));
     }
 }

@@ -21,7 +21,11 @@ class RoutesController extends Controller
         if (!$user || !$accessService->canAccessModule($user, 'routes', 'edit')) {
             abort(403, 'Нет прав на создание маршрутов');
         }
-        return view('routes.create');
+        
+        // Получаем доступные города в зависимости от роли
+        $cities = $this->getAccessibleCities($user, $accessService);
+        
+        return view('routes.create', compact('cities', 'user'));
     }
 
     public function store(Request $request, AccessService $accessService)
@@ -31,12 +35,21 @@ class RoutesController extends Controller
             abort(403, 'Нет прав на создание маршрутов');
         }
 
-        $data = $this->validateRoute($request);
+        $data = $this->validateRoute($request, $user, $accessService);
+
+        // Проверяем доступ к выбранному городу
+        if (!empty($data['city_id']) && !$this->canAccessCity($user, $accessService, (int) $data['city_id'])) {
+            abort(403, 'Нет доступа к выбранному городу');
+        }
 
         $payload = [
             'route_code' => $data['route_code'],
             'route_type' => $data['route_type'],
         ];
+
+        if (!empty($data['city_id'])) {
+            $payload['city_id'] = (int) $data['city_id'];
+        }
 
         if (schema_has_column('routes', 'route_area')) {
             $payload['route_area'] = $data['route_area'] ?? null;
@@ -55,19 +68,51 @@ class RoutesController extends Controller
         return redirect()->route('module.cards')->with('ok', 'Маршрут добавлен');
     }
 
-    public function edit(Route $route)
+    public function edit(Route $route, AccessService $accessService)
     {
-        return view('routes.edit', compact('route'));
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        // Проверяем доступ к маршруту через город
+        if ($route->city_id && !$this->canAccessCity($user, $accessService, $route->city_id)) {
+            abort(403, 'Нет доступа к этому маршруту');
+        }
+
+        // Получаем доступные города в зависимости от роли
+        $cities = $this->getAccessibleCities($user, $accessService);
+
+        return view('routes.edit', compact('route', 'cities', 'user'));
     }
 
-    public function update(Request $request, Route $route)
+    public function update(Request $request, Route $route, AccessService $accessService)
     {
-        $data = $this->validateRoute($request);
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        // Проверяем доступ к маршруту через город
+        if ($route->city_id && !$this->canAccessCity($user, $accessService, $route->city_id)) {
+            abort(403, 'Нет доступа к этому маршруту');
+        }
+
+        $data = $this->validateRoute($request, $user, $accessService);
+
+        // Проверяем доступ к выбранному городу
+        if (!empty($data['city_id']) && !$this->canAccessCity($user, $accessService, (int) $data['city_id'])) {
+            abort(403, 'Нет доступа к выбранному городу');
+        }
 
         $payload = [
             'route_code' => $data['route_code'],
             'route_type' => $data['route_type'],
         ];
+
+        if (!empty($data['city_id'])) {
+            $payload['city_id'] = (int) $data['city_id'];
+        }
 
         if (schema_has_column('routes', 'route_area')) {
             $payload['route_area'] = $data['route_area'] ?? null;
@@ -84,7 +129,21 @@ class RoutesController extends Controller
         if (!$user || !$accessService->canAccessModule($user, 'routes', 'edit')) {
             abort(403, 'Нет прав на импорт маршрутов');
         }
-        return view('routes.import');
+
+        // Получаем доступные города для фильтра
+        $cities = collect();
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+                $cities = \App\Models\City::orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                }
+            }
+        }
+
+        return view('routes.import', compact('cities', 'user'));
     }
 
     public function import(Request $request, AccessService $accessService)
@@ -94,18 +153,25 @@ class RoutesController extends Controller
             abort(403, 'Нет прав на импорт маршрутов');
         }
 
-        $request->validate([
+        $validationRules = [
             'file' => ['required', 'file', 'mimes:csv,json,txt'],
             'file_type' => ['required', 'in:csv,json'],
-        ]);
+        ];
+
+        // Для developer, general_director, regional_director - обязательный выбор города
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+            $validationRules['city_id'] = ['required', 'integer', 'exists:cities,city_id'];
+        }
+
+        $request->validate($validationRules);
 
         $file = $request->file('file');
         $fileType = $request->input('file_type');
         $columns = Schema::getColumnListing('routes');
         $imported = 0;
         $sortOrder = 1;
-
-        DB::transaction(function () use ($file, $fileType, $columns, &$imported, &$sortOrder) {
+        
+        DB::transaction(function () use ($file, $fileType, $columns, &$imported, &$sortOrder, $user, $accessService, $request) {
             $this->clearRoutesData();
 
             if ($fileType === 'csv') {
@@ -158,6 +224,60 @@ class RoutesController extends Controller
                         'sort_order' => $sortOrder,
                     ];
 
+                    // Определяем city_id для импорта
+                    $cityId = null;
+                    
+                    // Приоритет 1: city_id из формы (для developer, general_director, regional_director)
+                    if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+                        $formCityId = $request->input('city_id');
+                        if ($formCityId) {
+                            // Проверяем доступ к городу
+                            if ($accessService->isRegionalDirector($user)) {
+                                $region = $accessService->regionName($user);
+                                if ($region) {
+                                    $cityExists = \App\Models\City::where('city_id', $formCityId)
+                                        ->where('region_name', $region)
+                                        ->exists();
+                                    if ($cityExists) {
+                                        $cityId = (int) $formCityId;
+                                    }
+                                }
+                            } else {
+                                // Developer и General Director - любой город
+                                $cityId = (int) $formCityId;
+                            }
+                        }
+                    }
+                    
+                    // Приоритет 2: city_id из CSV
+                    if (!$cityId) {
+                        $cityColumn = $map['city_id'] ?? null;
+                        if ($cityColumn !== null && !empty($row[$cityColumn])) {
+                            $cityId = (int) $row[$cityColumn];
+                        }
+                    }
+                    
+                    // Приоритет 3: определяем по роли (для остальных ролей)
+                    if (!$cityId && $user) {
+                        if ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
+                            $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+                        } elseif ($accessService->isRegionalDirector($user)) {
+                            $region = $accessService->regionName($user);
+                            if ($region) {
+                                $cityId = \App\Models\City::where('region_name', $region)->value('city_id');
+                            }
+                        }
+                    }
+
+                    // Проверяем доступ к городу
+                    if ($cityId && $user && !$this->canAccessCity($user, $accessService, $cityId)) {
+                        continue; // Пропускаем маршрут, если нет доступа к городу
+                    }
+
+                    if ($cityId && schema_has_column('routes', 'city_id')) {
+                        $payload['city_id'] = $cityId;
+                    }
+
                     $payload = array_intersect_key($payload, array_flip($columns));
                     Route::create($payload);
 
@@ -190,6 +310,57 @@ class RoutesController extends Controller
                         'sort_order' => $sortOrder,
                     ];
 
+                    // Определяем city_id для импорта
+                    $cityId = null;
+                    
+                    // Приоритет 1: city_id из формы (для developer, general_director, regional_director)
+                    if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+                        $formCityId = $request->input('city_id');
+                        if ($formCityId) {
+                            // Проверяем доступ к городу
+                            if ($accessService->isRegionalDirector($user)) {
+                                $region = $accessService->regionName($user);
+                                if ($region) {
+                                    $cityExists = \App\Models\City::where('city_id', $formCityId)
+                                        ->where('region_name', $region)
+                                        ->exists();
+                                    if ($cityExists) {
+                                        $cityId = (int) $formCityId;
+                                    }
+                                }
+                            } else {
+                                // Developer и General Director - любой город
+                                $cityId = (int) $formCityId;
+                            }
+                        }
+                    }
+                    
+                    // Приоритет 2: city_id из JSON
+                    if (!$cityId && !empty($item['city_id'])) {
+                        $cityId = (int) $item['city_id'];
+                    }
+                    
+                    // Приоритет 3: определяем по роли (для остальных ролей)
+                    if (!$cityId && $user) {
+                        if ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
+                            $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+                        } elseif ($accessService->isRegionalDirector($user)) {
+                            $region = $accessService->regionName($user);
+                            if ($region) {
+                                $cityId = \App\Models\City::where('region_name', $region)->value('city_id');
+                            }
+                        }
+                    }
+
+                    // Проверяем доступ к городу
+                    if ($cityId && $user && !$this->canAccessCity($user, $accessService, $cityId)) {
+                        continue; // Пропускаем маршрут, если нет доступа к городу
+                    }
+
+                    if ($cityId && schema_has_column('routes', 'city_id')) {
+                        $payload['city_id'] = $cityId;
+                    }
+
                     $payload = array_intersect_key($payload, array_flip($columns));
                     Route::create($payload);
 
@@ -202,18 +373,80 @@ class RoutesController extends Controller
         return back()->with('ok', 'Импортировано: ' . $imported);
     }
 
-    private function validateRoute(Request $request): array
+    private function validateRoute(Request $request, $user = null, AccessService $accessService = null): array
     {
         $rules = [
             'route_code' => ['required', 'string', 'max:255'],
             'route_type' => ['required', 'in:city,private,mixed'],
         ];
 
+        // Для developer и general_director city_id обязателен
+        if ($user && $accessService && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user))) {
+            $rules['city_id'] = ['required', 'integer', 'exists:cities,city_id'];
+        } elseif ($user && $accessService) {
+            // Для остальных - опционально, но если указан - проверяем
+            $rules['city_id'] = ['nullable', 'integer', 'exists:cities,city_id'];
+        }
+
         if (schema_has_column('routes', 'route_area')) {
             $rules['route_area'] = ['nullable', 'string', 'max:255'];
         }
 
         return $request->validate($rules);
+    }
+
+    private function getAccessibleCities($user, AccessService $accessService)
+    {
+        if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+            // Все города
+            return \App\Models\City::orderBy('city_name')->get();
+        } elseif ($accessService->isRegionalDirector($user)) {
+            // Города своего региона
+            $region = $accessService->regionName($user);
+            if ($region) {
+                return \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+            }
+            return collect();
+        } elseif ($accessService->isBranchDirector($user) && !empty($user->branch_id)) {
+            // Город своего филиала
+            $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+            if ($cityId) {
+                return \App\Models\City::where('city_id', $cityId)->get();
+            }
+            return collect();
+        } elseif ($accessService->isManager($user) && !empty($user->branch_id)) {
+            // Город своего филиала
+            $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+            if ($cityId) {
+                return \App\Models\City::where('city_id', $cityId)->get();
+            }
+            return collect();
+        }
+
+        return collect();
+    }
+
+    private function canAccessCity($user, AccessService $accessService, int $cityId): bool
+    {
+        if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
+            return true;
+        } elseif ($accessService->isRegionalDirector($user)) {
+            $region = $accessService->regionName($user);
+            if ($region) {
+                return \App\Models\City::where('city_id', $cityId)
+                    ->where('region_name', $region)
+                    ->exists();
+            }
+            return false;
+        } elseif ($accessService->isBranchDirector($user) && !empty($user->branch_id)) {
+            $userCityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+            return (int) $userCityId === $cityId;
+        } elseif ($accessService->isManager($user) && !empty($user->branch_id)) {
+            $userCityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
+            return (int) $userCityId === $cityId;
+        }
+
+        return false;
     }
 
     private function normalizeRouteType(?string $value): string

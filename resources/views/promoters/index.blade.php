@@ -25,15 +25,13 @@
     <h3 class="m-0">Промоутеры</h3>
     <div class="vp-toolbar-actions">
         @php
-            // Для developer всегда показываем кнопки
+            // Проверяем права на редактирование промоутеров
             $canManagePromoters = false;
             if (auth()->check()) {
                 $accessService = app(\App\Services\AccessService::class);
-                if ($accessService->isDeveloper(auth()->user())) {
-                    $canManagePromoters = true;
-                } elseif (!empty($canEditModules['promoters'])) {
-                    $canManagePromoters = true;
-                }
+                $user = auth()->user();
+                // Проверяем через canAccessModule для всех ролей
+                $canManagePromoters = $accessService->canAccessModule($user, 'promoters', 'edit');
             }
         @endphp
         @if($canManagePromoters)
@@ -49,6 +47,29 @@
 
 <form class="vp-filter vp-filter-compact vp-filter-stack mb-3" method="GET" action="{{ route('module.promoters') }}">
     <div class="vp-filter-fields">
+        @php
+            $showCityFilter = false;
+            $currentUser = $user ?? auth()->user();
+            if ($currentUser) {
+                $accessService = app(\App\Services\AccessService::class);
+                $showCityFilter = $accessService->isDeveloper($currentUser) || $accessService->isGeneralDirector($currentUser) || $accessService->isRegionalDirector($currentUser);
+            }
+        @endphp
+        @if($showCityFilter && $cities->isNotEmpty())
+            @php
+                $selectedCity = $cities->firstWhere('city_id', request('city_id'));
+            @endphp
+            <div class="vp-filter-group vp-city-autocomplete">
+                <input type="text" 
+                       class="form-control form-control-sm vp-city-input" 
+                       placeholder="Город" 
+                       value="{{ $selectedCity?->city_name ?? '' }}"
+                       autocomplete="off"
+                       data-cities='@json($cities->map(fn($c) => ['id' => $c->city_id, 'name' => $c->city_name]))'>
+                <input type="hidden" name="city_id" class="vp-city-id" value="{{ request('city_id') }}">
+                <div class="vp-city-autocomplete-dropdown"></div>
+            </div>
+        @endif
         <input class="form-control form-control-sm vp-filter-input" name="search"
                placeholder="Поиск: имя или телефон" value="{{ request('search') }}">
         <select class="form-select form-select-sm vp-filter-status vp-filter-status-short" name="status">

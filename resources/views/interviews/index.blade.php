@@ -21,15 +21,12 @@
     <h3 class="m-0">Собеседования</h3>
     <div class="vp-toolbar-actions">
         @php
-            // Для developer всегда показываем кнопку
+            // Проверяем права через canAccessModule
             $canAddInterview = false;
             if (auth()->check()) {
                 $accessService = app(\App\Services\AccessService::class);
-                if ($accessService->isDeveloper(auth()->user())) {
-                    $canAddInterview = true;
-                } elseif (!empty($canEditModules['interviews'])) {
-                    $canAddInterview = true;
-                }
+                $user = auth()->user();
+                $canAddInterview = $accessService->canAccessModule($user, 'interviews', 'edit');
             }
         @endphp
         @if($canAddInterview)
@@ -47,6 +44,32 @@
         <form class="vp-filter vp-filter-compact vp-filter-stack" method="GET" action="{{ route('interviews.index') }}">
             <div class="vp-filter-fields">
                 <div class="row g-2 w-100">
+                    @php
+                        $showCityFilter = false;
+                        $currentUser = $user ?? auth()->user();
+                        if ($currentUser) {
+                            $accessService = app(\App\Services\AccessService::class);
+                            $showCityFilter = $accessService->isDeveloper($currentUser) || $accessService->isGeneralDirector($currentUser) || $accessService->isRegionalDirector($currentUser);
+                        }
+                    @endphp
+                    @if($showCityFilter && $cities->isNotEmpty())
+                        @php
+                            $selectedCity = $cities->firstWhere('city_id', request('city_id'));
+                        @endphp
+                        <div class="col-md-2">
+                            <label class="form-label">Город</label>
+                            <div class="vp-city-autocomplete">
+                                <input type="text" 
+                                       class="form-control form-control-sm vp-city-input" 
+                                       placeholder="Город" 
+                                       value="{{ $selectedCity?->city_name ?? '' }}"
+                                       autocomplete="off"
+                                       data-cities='@json($cities->map(fn($c) => ['id' => $c->city_id, 'name' => $c->city_name]))'>
+                                <input type="hidden" name="city_id" class="vp-city-id" value="{{ request('city_id') }}">
+                                <div class="vp-city-autocomplete-dropdown"></div>
+                            </div>
+                        </div>
+                    @endif
                     <div class="col-md-2">
                         <label class="form-label">Поиск</label>
                         <input class="form-control form-control-sm" name="search" value="{{ $search }}" placeholder="ФИО / телефон / источник">
@@ -97,14 +120,12 @@
                 <th style="width: 170px;">Статус</th>
                 <th>Комментарий</th>
                 @php
+                    // Проверяем права через canAccessModule
                     $canEditInterview = false;
                     if (auth()->check()) {
                         $accessService = app(\App\Services\AccessService::class);
-                        if ($accessService->isDeveloper(auth()->user())) {
-                            $canEditInterview = true;
-                        } elseif (!empty($canEditModules['interviews'])) {
-                            $canEditInterview = true;
-                        }
+                        $user = auth()->user();
+                        $canEditInterview = $accessService->canAccessModule($user, 'interviews', 'edit');
                     }
                 @endphp
                 @if($canEditInterview)
