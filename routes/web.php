@@ -112,27 +112,27 @@ Route::middleware('auth')->group(function () {
 
     // AD TEMPLATES (кнопкой из "Карты")
     Route::get('/ad-templates', [AdTemplatesController::class, 'index'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,view')
         ->name('ad_templates.index');
 
     Route::get('/ad-templates/create', [AdTemplatesController::class, 'create'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,edit')
         ->name('ad_templates.create');
 
     Route::post('/ad-templates', [AdTemplatesController::class, 'store'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,edit')
         ->name('ad_templates.store');
 
     Route::get('/ad-templates/{adTemplate}/edit', [AdTemplatesController::class, 'edit'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,edit')
         ->name('ad_templates.edit');
 
     Route::put('/ad-templates/{adTemplate}', [AdTemplatesController::class, 'update'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,edit')
         ->name('ad_templates.update');
 
     Route::post('/ad-templates/{adTemplate}/toggle', [AdTemplatesController::class, 'toggle'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,edit')
         ->name('ad_templates.toggle');
 
     // CARDS

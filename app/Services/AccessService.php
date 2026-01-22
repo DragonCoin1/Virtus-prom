@@ -106,6 +106,14 @@ class AccessService
         return $this->roleName($user) !== 'manager';
     }
 
+    public function canManageAdTemplates(User $user): bool
+    {
+        return $this->isDeveloper($user)
+            || $this->isGeneralDirector($user)
+            || $this->isRegionalDirector($user)
+            || $this->isBranchDirector($user);
+    }
+
     public function canAccessBranch(User $user, ?int $branchId): bool
     {
         if ($this->isFullAccess($user)) {
