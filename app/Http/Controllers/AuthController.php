@@ -29,7 +29,12 @@ class AuthController extends Controller
             return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
         }
 
-        if (!Hash::check($request->input('password'), $user->user_password_hash)) {
+        $passwordHash = $user->user_password_hash ?? null;
+        if (!$passwordHash && isset($user->password)) {
+            $passwordHash = $user->password;
+        }
+
+        if (!$passwordHash || !Hash::check($request->input('password'), $passwordHash)) {
             return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
         }
 
