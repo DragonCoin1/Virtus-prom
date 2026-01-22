@@ -11,6 +11,9 @@ use App\Http\Controllers\AdTemplatesController;
 use App\Http\Controllers\InterviewsController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\UsersController;
+use App\Http\Controllers\InstructionsController;
+use App\Http\Controllers\AdResidualsController;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
@@ -111,28 +114,53 @@ Route::middleware('auth')->group(function () {
 
     // AD TEMPLATES (кнопкой из "Карты")
     Route::get('/ad-templates', [AdTemplatesController::class, 'index'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,view')
         ->name('ad_templates.index');
 
     Route::get('/ad-templates/create', [AdTemplatesController::class, 'create'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,edit')
         ->name('ad_templates.create');
 
     Route::post('/ad-templates', [AdTemplatesController::class, 'store'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,edit')
         ->name('ad_templates.store');
 
     Route::get('/ad-templates/{adTemplate}/edit', [AdTemplatesController::class, 'edit'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,edit')
         ->name('ad_templates.edit');
 
     Route::put('/ad-templates/{adTemplate}', [AdTemplatesController::class, 'update'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,edit')
         ->name('ad_templates.update');
 
     Route::post('/ad-templates/{adTemplate}/toggle', [AdTemplatesController::class, 'toggle'])
-        ->middleware('module:route_actions,edit')
+        ->middleware('module:ad_templates,edit')
         ->name('ad_templates.toggle');
+
+    // AD RESIDUALS
+    Route::get('/ad-residuals', [AdResidualsController::class, 'index'])
+        ->middleware('module:ad_residuals,view')
+        ->name('ad_residuals.index');
+
+    Route::get('/ad-residuals/create', [AdResidualsController::class, 'create'])
+        ->middleware('module:ad_residuals,edit')
+        ->name('ad_residuals.create');
+
+    Route::post('/ad-residuals', [AdResidualsController::class, 'store'])
+        ->middleware('module:ad_residuals,edit')
+        ->name('ad_residuals.store');
+
+    Route::get('/ad-residuals/{adResidual}/edit', [AdResidualsController::class, 'edit'])
+        ->middleware('module:ad_residuals,edit')
+        ->name('ad_residuals.edit');
+
+    Route::put('/ad-residuals/{adResidual}', [AdResidualsController::class, 'update'])
+        ->middleware('module:ad_residuals,edit')
+        ->name('ad_residuals.update');
+
+    Route::delete('/ad-residuals/{adResidual}', [AdResidualsController::class, 'destroy'])
+        ->middleware('module:ad_residuals,edit')
+        ->name('ad_residuals.destroy');
 
     // CARDS
     Route::get('/cards', [ModuleController::class, 'cards'])
@@ -145,18 +173,23 @@ Route::middleware('auth')->group(function () {
         ->name('interviews.index');
 
     Route::get('/interviews/create', [InterviewsController::class, 'create'])
+        ->middleware('module:interviews,edit')
         ->name('interviews.create');
 
     Route::post('/interviews', [InterviewsController::class, 'store'])
+        ->middleware('module:interviews,edit')
         ->name('interviews.store');
 
     Route::get('/interviews/{interview}/edit', [InterviewsController::class, 'edit'])
+        ->middleware('module:interviews,edit')
         ->name('interviews.edit');
 
     Route::put('/interviews/{interview}', [InterviewsController::class, 'update'])
+        ->middleware('module:interviews,edit')
         ->name('interviews.update');
 
     Route::delete('/interviews/{interview}', [InterviewsController::class, 'destroy'])
+        ->middleware('module:interviews,edit')
         ->name('interviews.destroy');
 
     // SALARY
@@ -188,4 +221,58 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports', [ReportsController::class, 'index'])
         ->middleware('module:reports,view')
         ->name('reports.index');
+
+    // INSTRUCTIONS
+    Route::get('/instructions', [InstructionsController::class, 'index'])
+        ->middleware('module:instructions,view')
+        ->name('instructions.index');
+
+    Route::get('/instructions/create', [InstructionsController::class, 'create'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.create');
+
+    Route::post('/instructions', [InstructionsController::class, 'store'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.store');
+
+    Route::get('/instructions/{instruction}/edit', [InstructionsController::class, 'edit'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.edit');
+
+    Route::put('/instructions/{instruction}', [InstructionsController::class, 'update'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.update');
+
+    Route::post('/instructions/{instruction}/toggle', [InstructionsController::class, 'toggle'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.toggle');
+
+    Route::delete('/instructions/{instruction}', [InstructionsController::class, 'destroy'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.destroy');
+
+    // USERS (RBAC management)
+    Route::get('/users', [UsersController::class, 'index'])
+        ->middleware('user.manage')
+        ->name('users.index');
+
+    Route::get('/users/create', [UsersController::class, 'create'])
+        ->middleware('user.manage')
+        ->name('users.create');
+
+    Route::post('/users', [UsersController::class, 'store'])
+        ->middleware('user.manage')
+        ->name('users.store');
+
+    Route::get('/users/{user}/edit', [UsersController::class, 'edit'])
+        ->middleware('user.manage')
+        ->name('users.edit');
+
+    Route::put('/users/{user}', [UsersController::class, 'update'])
+        ->middleware('user.manage')
+        ->name('users.update');
+
+    Route::delete('/users/{user}', [UsersController::class, 'destroy'])
+        ->middleware('user.manage')
+        ->name('users.destroy');
 });
