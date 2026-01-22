@@ -26,8 +26,12 @@ class UsersController extends Controller
             ->appends($request->query());
 
         $roles = $this->rolesList();
+        
+        // Передаем canManageUsers явно
+        $currentUser = $user ?? auth()->user();
+        $canManageUsers = $currentUser ? !$accessService->isPromoter($currentUser) : false;
 
-        return view('users.index', compact('users', 'roles'));
+        return view('users.index', compact('users', 'roles', 'canManageUsers'));
     }
 
     public function create(Request $request, AccessService $accessService)
