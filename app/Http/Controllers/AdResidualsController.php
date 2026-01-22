@@ -19,19 +19,14 @@ class AdResidualsController extends Controller
             $accessService->scopeBranches($branchesQuery, $user);
         }
         
-        // Фильтр по городу (для developer, general_director, regional_director)
+        // Фильтр по городу (для developer, general_director, regional_director, branch_director)
         $cityId = $request->input('city_id');
-        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
             // Проверяем доступ к городу
-            if ($accessService->isRegionalDirector($user)) {
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    $cityExists = \App\Models\City::where('city_id', $cityId)
-                        ->where('region_name', $region)
-                        ->exists();
-                    if ($cityExists) {
-                        $branchesQuery->where('city_id', $cityId);
-                    }
+            if ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                $cityIds = $accessService->getDirectorCityIds($user);
+                if (in_array($cityId, $cityIds)) {
+                    $branchesQuery->where('city_id', $cityId);
                 }
             } else {
                 // Developer и General Director - любой город
@@ -49,13 +44,7 @@ class AdResidualsController extends Controller
             $query->whereRaw('1=0');
         }
 
-        if ($request->filled('branch_id')) {
-            $branchId = (int) $request->input('branch_id');
-            if ($user && !$accessService->canAccessBranch($user, $branchId)) {
-                abort(403, 'Нет доступа к филиалу');
-            }
-            $query->where('branch_id', $branchId);
-        }
+        // Фильтр по филиалу убран, фильтрация идет только по городам
 
         if ($request->filled('ad_type')) {
             $query->where('ad_type', $request->input('ad_type'));
@@ -81,13 +70,13 @@ class AdResidualsController extends Controller
 
         // Получаем доступные города для фильтра
         $cities = collect();
-        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
             if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
                 $cities = \App\Models\City::orderBy('city_name')->get();
-            } elseif ($accessService->isRegionalDirector($user)) {
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                $cityIds = $accessService->getDirectorCityIds($user);
+                if (!empty($cityIds)) {
+                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
                 }
             }
         }

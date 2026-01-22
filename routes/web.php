@@ -281,6 +281,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/cities', [CitiesController::class, 'index'])
         ->name('cities.index');
 
+    Route::get('/cities/create', [CitiesController::class, 'create'])
+        ->name('cities.create');
+
+    Route::post('/cities', [CitiesController::class, 'store'])
+        ->name('cities.store');
+
     Route::get('/cities/import', [CitiesController::class, 'importForm'])
         ->name('cities.import.form');
 

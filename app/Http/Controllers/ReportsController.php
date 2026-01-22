@@ -24,20 +24,15 @@ class ReportsController extends Controller
         $sort = $request->input('sort', 'desc'); // asc/desc
         $sort = ($sort === 'asc') ? 'asc' : 'desc';
 
-        // Фильтр по городу (для developer, general_director, regional_director)
+        // Фильтр по городу (для developer, general_director, regional_director, branch_director)
         $cityId = $request->input('city_id');
         $cityFilter = null;
-        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
             // Проверяем доступ к городу
-            if ($accessService->isRegionalDirector($user)) {
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    $cityExists = \App\Models\City::where('city_id', $cityId)
-                        ->where('region_name', $region)
-                        ->exists();
-                    if ($cityExists) {
-                        $cityFilter = $cityId;
-                    }
+            if ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                $cityIds = $accessService->getDirectorCityIds($user);
+                if (in_array($cityId, $cityIds)) {
+                    $cityFilter = $cityId;
                 }
             } else {
                 // Developer и General Director - любой город
@@ -53,18 +48,17 @@ class ReportsController extends Controller
             if ($accessService->isManager($user) && !empty($user->branch_id)) {
                 // Менеджер - только свой филиал
                 $dailyQ->where('promoters.branch_id', $user->branch_id);
-            } elseif ($accessService->isRegionalDirector($user)) {
-                // Региональный директор - свой регион
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    if ($cityFilter) {
+            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                // Региональный директор и директор - города из списка
+                $cityIds = $accessService->getDirectorCityIds($user);
+                if (!empty($cityIds)) {
+                    if ($cityFilter && in_array($cityFilter, $cityIds)) {
                         // Если выбран конкретный город - фильтруем по нему
                         $dailyQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
                             ->where('branches.city_id', $cityFilter);
                     } else {
                         $dailyQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
-                            ->join('cities', 'branches.city_id', '=', 'cities.city_id')
-                            ->where('cities.region_name', $region);
+                            ->whereIn('branches.city_id', $cityIds);
                     }
                 } else {
                     $dailyQ->whereRaw('1=0');
@@ -134,17 +128,16 @@ class ReportsController extends Controller
             if ($user && !$accessService->isFullAccess($user)) {
                 if ($accessService->isManager($user) && !empty($user->branch_id)) {
                     $promoterPaymentsQ->where('promoters.branch_id', $user->branch_id);
-                } elseif ($accessService->isRegionalDirector($user)) {
-                    $region = $accessService->regionName($user);
-                    if ($region) {
-                        if ($cityFilter) {
+                } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                    $cityIds = $accessService->getDirectorCityIds($user);
+                    if (!empty($cityIds)) {
+                        if ($cityFilter && in_array($cityFilter, $cityIds)) {
                             // Если выбран конкретный город - фильтруем по нему
                             $promoterPaymentsQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
                                 ->where('branches.city_id', $cityFilter);
                         } else {
                             $promoterPaymentsQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
-                                ->join('cities', 'branches.city_id', '=', 'cities.city_id')
-                                ->where('cities.region_name', $region);
+                                ->whereIn('branches.city_id', $cityIds);
                         }
                     } else {
                         $promoterPaymentsQ->whereRaw('1=0');
@@ -181,17 +174,16 @@ class ReportsController extends Controller
         if ($user && !$accessService->isFullAccess($user)) {
             if ($accessService->isManager($user) && !empty($user->branch_id)) {
                 $monthQ->where('promoters.branch_id', $user->branch_id);
-            } elseif ($accessService->isRegionalDirector($user)) {
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    if ($cityFilter) {
+            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                $cityIds = $accessService->getDirectorCityIds($user);
+                if (!empty($cityIds)) {
+                    if ($cityFilter && in_array($cityFilter, $cityIds)) {
                         // Если выбран конкретный город - фильтруем по нему
                         $monthQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
                             ->where('branches.city_id', $cityFilter);
                     } else {
                         $monthQ->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
-                            ->join('cities', 'branches.city_id', '=', 'cities.city_id')
-                            ->where('cities.region_name', $region);
+                            ->whereIn('branches.city_id', $cityIds);
                     }
                 } else {
                     $monthQ->whereRaw('1=0');
@@ -247,13 +239,13 @@ class ReportsController extends Controller
 
         // Получаем доступные города для фильтра
         $cities = collect();
-        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
             if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
                 $cities = \App\Models\City::orderBy('city_name')->get();
-            } elseif ($accessService->isRegionalDirector($user)) {
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                $cityIds = $accessService->getDirectorCityIds($user);
+                if (!empty($cityIds)) {
+                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
                 }
             }
         }

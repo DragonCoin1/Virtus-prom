@@ -326,6 +326,15 @@ body.vp-body{
     overflow: hidden;
 }
 
+/* Разрешаем overflow для карточек с открытым autocomplete */
+.card:has(.vp-city-autocomplete-dropdown.show) {
+    overflow: visible;
+}
+
+.card-body:has(.vp-city-autocomplete-dropdown.show) {
+    overflow: visible;
+}
+
 .card:hover{
     box-shadow: var(--vp-shadow-lg);
     border-color: rgba(37, 99, 235, 0.2);
@@ -654,24 +663,77 @@ html{
     z-index: 1;
 }
 
+/* Убираем overflow: hidden у родительских элементов, чтобы dropdown не обрезался */
+.vp-city-autocomplete:has(.vp-city-autocomplete-dropdown.show) {
+    z-index: 10000;
+    position: relative;
+}
+
+/* Разрешаем overflow для всех родительских элементов с открытым dropdown */
+.card:has(.vp-city-autocomplete-dropdown.show),
+.card-body:has(.vp-city-autocomplete-dropdown.show),
+.table-responsive:has(.vp-city-autocomplete-dropdown.show),
+.vp-filter:has(.vp-city-autocomplete-dropdown.show),
+.vp-filter-fields:has(.vp-city-autocomplete-dropdown.show),
+.vp-filter-group:has(.vp-city-autocomplete-dropdown.show),
+.container:has(.vp-city-autocomplete-dropdown.show),
+.row:has(.vp-city-autocomplete-dropdown.show),
+.col-md-6:has(.vp-city-autocomplete-dropdown.show),
+.col-md-12:has(.vp-city-autocomplete-dropdown.show),
+.col-md-3:has(.vp-city-autocomplete-dropdown.show) {
+    overflow: visible !important;
+    position: relative;
+}
+
+/* Альтернативный подход: если :has() не поддерживается, используем класс */
+.vp-city-autocomplete-dropdown.show {
+    position: fixed !important;
+    z-index: 99999 !important;
+}
+
+/* Класс для родительских элементов с открытым autocomplete (для совместимости) */
+.vp-autocomplete-open {
+    overflow: visible !important;
+    position: relative;
+    z-index: 1000;
+}
+
+.card.vp-autocomplete-open,
+.card-body.vp-autocomplete-open,
+.table-responsive.vp-autocomplete-open,
+.vp-filter.vp-autocomplete-open,
+.vp-filter-fields.vp-autocomplete-open,
+.vp-filter-group.vp-autocomplete-open,
+.container.vp-autocomplete-open,
+.row.vp-autocomplete-open,
+.col-md-6.vp-autocomplete-open,
+.col-md-12.vp-autocomplete-open,
+.col-md-3.vp-autocomplete-open {
+    overflow: visible !important;
+}
+
 .vp-city-autocomplete input{
     width: 100%;
 }
 
 .vp-city-autocomplete-dropdown{
-    position: fixed;
+    position: fixed !important;
     background: white;
     border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
+    border-top: none !important;
+    border-radius: 0 0 0.375rem 0.375rem;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
     max-height: 200px;
     overflow-y: auto;
-    z-index: 9999;
-    margin-top: 0;
+    z-index: 99999 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0;
     display: none;
     min-width: 200px;
-    border-top-left-radius: 0;
-    border-top-right-radius: 0;
+    top: auto !important;
+    pointer-events: auto !important;
 }
 
 .vp-city-autocomplete-dropdown.show{

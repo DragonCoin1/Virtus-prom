@@ -13,28 +13,30 @@ class ModuleController extends Controller
     {
         $user = $request->user();
         
-        // Менеджеры и директора филиалов видят только маршруты своего города
+        // Менеджеры видят только маршруты своего города через branch_id
+        // Директора видят маршруты своих городов через user_cities
         $cityFilter = null;
-        if ($user && ($accessService->isManager($user) || $accessService->isBranchDirector($user)) && !empty($user->branch_id)) {
+        if ($user && $accessService->isManager($user) && !empty($user->branch_id)) {
             $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
             if ($cityId) {
                 $cityFilter = $cityId;
             }
+        } elseif ($user && $accessService->isBranchDirector($user)) {
+            // Для директора берем первый город из списка, если не выбран фильтр
+            $cityIds = $accessService->getDirectorCityIds($user);
+            if (!empty($cityIds) && !$request->input('city_id')) {
+                $cityFilter = $cityIds[0]; // Показываем первый город по умолчанию
+            }
         }
 
-        // Фильтр по городу из запроса (для developer, general_director, regional_director)
+        // Фильтр по городу из запроса (для developer, general_director, regional_director, branch_director)
         $cityId = $request->input('city_id');
-        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+        if ($cityId && $user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
             // Проверяем доступ к городу
-            if ($accessService->isRegionalDirector($user)) {
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    $cityExists = \App\Models\City::where('city_id', $cityId)
-                        ->where('region_name', $region)
-                        ->exists();
-                    if ($cityExists) {
-                        $cityFilter = $cityId;
-                    }
+            if ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                $cityIds = $accessService->getDirectorCityIds($user);
+                if (in_array($cityId, $cityIds)) {
+                    $cityFilter = $cityId;
                 }
             } else {
                 // Developer и General Director - любой город
@@ -93,13 +95,13 @@ class ModuleController extends Controller
 
         // Получаем доступные города для фильтра
         $cities = collect();
-        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
             if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
                 $cities = \App\Models\City::orderBy('city_name')->get();
-            } elseif ($accessService->isRegionalDirector($user)) {
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                $cityIds = $accessService->getDirectorCityIds($user);
+                if (!empty($cityIds)) {
+                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
                 }
             }
         }

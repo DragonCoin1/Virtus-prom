@@ -21,4 +21,9 @@ class City extends Model
     {
         return $this->hasMany(Branch::class, 'city_id', 'city_id');
     }
+
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'user_cities', 'city_id', 'user_id', 'city_id', 'id');
+    }
 }

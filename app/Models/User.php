@@ -72,4 +72,9 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Branch::class, 'branch_id', 'branch_id');
     }
+
+    public function cities()
+    {
+        return $this->belongsToMany(City::class, 'user_cities', 'user_id', 'city_id', 'id', 'city_id');
+    }
 }

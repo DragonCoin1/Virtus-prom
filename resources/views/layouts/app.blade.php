@@ -67,41 +67,40 @@
                 @if(!empty($canViewModules['promoters']))
                     <a class="vp-nav-link {{ request()->routeIs('module.promoters') ? 'active' : '' }}" href="{{ route('module.promoters') }}">Промоутеры</a>
                 @endif
-
                 @if(!empty($canViewModules['route_actions']))
-                    <a class="vp-nav-link {{ request()->routeIs('module.route_actions') || request()->routeIs('route_actions.*') ? 'active' : '' }}"
-                       href="{{ route('module.route_actions') }}">Разноска</a>
+                    <a class="vp-nav-link {{ request()->routeIs('module.route_actions') || request()->routeIs('route_actions.*') ? 'active' : '' }}" href="{{ route('module.route_actions') }}">Разноска</a>
                 @endif
-
                 @if(!empty($canViewModules['cards']))
                     <a class="vp-nav-link {{ request()->routeIs('module.cards') ? 'active' : '' }}" href="{{ route('module.cards') }}">Карты</a>
                 @endif
-
                 @if(!empty($canViewModules['interviews']))
                     <a class="vp-nav-link {{ request()->routeIs('interviews.*') ? 'active' : '' }}" href="{{ route('interviews.index') }}">Собеседования</a>
                 @endif
-
                 @if(!empty($canViewModules['salary']))
                     <a class="vp-nav-link {{ request()->routeIs('salary.*') ? 'active' : '' }}" href="{{ route('salary.index') }}">Зарплата</a>
                 @endif
-
                 @if(!empty($canViewModules['reports']))
                     <a class="vp-nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.index') }}">Отчёты</a>
                 @endif
-
                 @if(!empty($canViewModules['ad_residuals']))
                     <a class="vp-nav-link {{ request()->routeIs('ad_residuals.*') ? 'active' : '' }}" href="{{ route('ad_residuals.index') }}">Остатки</a>
                 @endif
-
-                {{-- Инструкции скрыты по требованию --}}
-                {{-- @if(!empty($canViewModules['instructions']))
-                    <a class="vp-nav-link {{ request()->routeIs('instructions.*') ? 'active' : '' }}" href="{{ route('instructions.index') }}">Инструкции</a>
-                @endif --}}
-
-                @if($canManageUsers || (auth()->check() && app(AccessService::class)->isDeveloper(auth()->user())))
+                @php
+                    $currentUser = auth()->user();
+                    $accessService = app(AccessService::class);
+                    $showCitiesLink = false;
+                    if ($currentUser) {
+                        // Директор не должен видеть вкладку "Города"
+                        $showCitiesLink = !$accessService->isBranchDirector($currentUser) && (
+                                         $canManageUsers || 
+                                         $accessService->isDeveloper($currentUser) || 
+                                         $accessService->isGeneralDirector($currentUser) || 
+                                         $accessService->isRegionalDirector($currentUser));
+                    }
+                @endphp
+                @if($showCitiesLink)
                     <a class="vp-nav-link {{ request()->routeIs('cities.*') ? 'active' : '' }}" href="{{ route('cities.index') }}">Города</a>
                 @endif
-
                 @if($canManageUsers)
                     <a class="vp-nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">Пользователи</a>
                 @endif
@@ -186,9 +185,15 @@
             const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
             
             // Позиционируем сразу под input, без отступа
-            dropdown.style.top = (rect.bottom + scrollTop) + 'px';
+            // Используем rect.bottom для точного позиционирования
+            const topPosition = rect.bottom + scrollTop;
+            dropdown.style.position = 'fixed';
+            dropdown.style.top = topPosition + 'px';
             dropdown.style.left = (rect.left + scrollLeft) + 'px';
             dropdown.style.width = Math.max(rect.width, 200) + 'px';
+            dropdown.style.marginTop = '0';
+            dropdown.style.paddingTop = '0';
+            dropdown.style.transform = 'none';
         };
 
         const renderDropdown = (filteredCities) => {
@@ -251,6 +256,15 @@
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    
+                    // Проверяем, является ли это полем для множественного выбора городов
+                    const isMultipleCities = input.dataset.multipleCities === 'true';
+                    if (isMultipleCities) {
+                        // Для множественного выбора не устанавливаем значение напрямую
+                        // Логика будет обработана в users/create.blade.php
+                        return;
+                    }
+                    
                     input.value = city.name;
                     hiddenInput.value = city.id;
                     closeDropdown();
@@ -276,12 +290,26 @@
             isDropdownOpen = true;
             dropdown.classList.add('show');
             updateDropdownPosition();
+            
+            // Добавляем класс родительским элементам для правильного overflow
+            let parent = container;
+            while (parent && parent !== document.body) {
+                parent.classList.add('vp-autocomplete-open');
+                parent = parent.parentElement;
+            }
         };
         
         const closeDropdown = () => {
-            isDropdownOpen = false;
-            dropdown.classList.remove('show');
-            highlightedIndex = -1;
+            if (isDropdownOpen) {
+                isDropdownOpen = false;
+                dropdown.classList.remove('show');
+                highlightedIndex = -1;
+                
+                // Убираем класс с родительских элементов
+                document.querySelectorAll('.vp-autocomplete-open').forEach(el => {
+                    el.classList.remove('vp-autocomplete-open');
+                });
+            }
         };
 
         const updateHighlight = () => {
@@ -297,7 +325,13 @@
             if (!query.trim()) {
                 return citiesData;
             }
-            const lowerQuery = query.toLowerCase();
+            // Если есть запятые, берем только текст после последней запятой
+            const parts = query.split(',');
+            const searchQuery = parts[parts.length - 1].trim();
+            if (!searchQuery) {
+                return citiesData;
+            }
+            const lowerQuery = searchQuery.toLowerCase();
             return citiesData.filter(city => 
                 city.name.toLowerCase().includes(lowerQuery)
             );
@@ -305,12 +339,15 @@
 
         input.addEventListener('input', (e) => {
             const query = e.target.value;
+            // Если есть запятые, берем только текст после последней запятой для поиска
+            const parts = query.split(',');
+            const searchQuery = parts[parts.length - 1].trim();
             const filtered = filterCities(query);
             updateDropdownPosition();
             renderDropdown(filtered);
             
             // Если точное совпадение, устанавливаем ID
-            const exactMatch = citiesData.find(c => c.name.toLowerCase() === query.toLowerCase());
+            const exactMatch = citiesData.find(c => c.name.toLowerCase() === searchQuery.toLowerCase());
             if (exactMatch) {
                 hiddenInput.value = exactMatch.id;
             } else {

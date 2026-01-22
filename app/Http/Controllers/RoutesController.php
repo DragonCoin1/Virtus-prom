@@ -136,9 +136,9 @@ class RoutesController extends Controller
             if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
                 $cities = \App\Models\City::orderBy('city_name')->get();
             } elseif ($accessService->isRegionalDirector($user)) {
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+                $cityIds = $accessService->getRegionalDirectorCityIds($user);
+                if (!empty($cityIds)) {
+                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
                 }
             }
         }
@@ -233,14 +233,9 @@ class RoutesController extends Controller
                         if ($formCityId) {
                             // Проверяем доступ к городу
                             if ($accessService->isRegionalDirector($user)) {
-                                $region = $accessService->regionName($user);
-                                if ($region) {
-                                    $cityExists = \App\Models\City::where('city_id', $formCityId)
-                                        ->where('region_name', $region)
-                                        ->exists();
-                                    if ($cityExists) {
-                                        $cityId = (int) $formCityId;
-                                    }
+                                $cityIds = $accessService->getRegionalDirectorCityIds($user);
+                                if (in_array($formCityId, $cityIds)) {
+                                    $cityId = (int) $formCityId;
                                 }
                             } else {
                                 // Developer и General Director - любой город
@@ -262,9 +257,9 @@ class RoutesController extends Controller
                         if ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
                             $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
                         } elseif ($accessService->isRegionalDirector($user)) {
-                            $region = $accessService->regionName($user);
-                            if ($region) {
-                                $cityId = \App\Models\City::where('region_name', $region)->value('city_id');
+                            $cityIds = $accessService->getRegionalDirectorCityIds($user);
+                            if (!empty($cityIds)) {
+                                $cityId = $cityIds[0]; // Берем первый город из списка
                             }
                         }
                     }
@@ -319,14 +314,9 @@ class RoutesController extends Controller
                         if ($formCityId) {
                             // Проверяем доступ к городу
                             if ($accessService->isRegionalDirector($user)) {
-                                $region = $accessService->regionName($user);
-                                if ($region) {
-                                    $cityExists = \App\Models\City::where('city_id', $formCityId)
-                                        ->where('region_name', $region)
-                                        ->exists();
-                                    if ($cityExists) {
-                                        $cityId = (int) $formCityId;
-                                    }
+                                $cityIds = $accessService->getRegionalDirectorCityIds($user);
+                                if (in_array($formCityId, $cityIds)) {
+                                    $cityId = (int) $formCityId;
                                 }
                             } else {
                                 // Developer и General Director - любой город
@@ -345,9 +335,9 @@ class RoutesController extends Controller
                         if ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
                             $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
                         } elseif ($accessService->isRegionalDirector($user)) {
-                            $region = $accessService->regionName($user);
-                            if ($region) {
-                                $cityId = \App\Models\City::where('region_name', $region)->value('city_id');
+                            $cityIds = $accessService->getRegionalDirectorCityIds($user);
+                            if (!empty($cityIds)) {
+                                $cityId = $cityIds[0]; // Берем первый город из списка
                             }
                         }
                     }
@@ -401,10 +391,10 @@ class RoutesController extends Controller
             // Все города
             return \App\Models\City::orderBy('city_name')->get();
         } elseif ($accessService->isRegionalDirector($user)) {
-            // Города своего региона
-            $region = $accessService->regionName($user);
-            if ($region) {
-                return \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+            // Города из списка
+            $cityIds = $accessService->getRegionalDirectorCityIds($user);
+            if (!empty($cityIds)) {
+                return \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
             }
             return collect();
         } elseif ($accessService->isBranchDirector($user) && !empty($user->branch_id)) {
@@ -431,12 +421,8 @@ class RoutesController extends Controller
         if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
             return true;
         } elseif ($accessService->isRegionalDirector($user)) {
-            $region = $accessService->regionName($user);
-            if ($region) {
-                return \App\Models\City::where('city_id', $cityId)
-                    ->where('region_name', $region)
-                    ->exists();
-            }
+            $cityIds = $accessService->getRegionalDirectorCityIds($user);
+            return in_array($cityId, $cityIds);
             return false;
         } elseif ($accessService->isBranchDirector($user) && !empty($user->branch_id)) {
             $userCityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');

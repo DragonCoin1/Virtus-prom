@@ -43,7 +43,7 @@
     $currentUser = $user ?? auth()->user();
     if ($currentUser) {
         $accessService = app(\App\Services\AccessService::class);
-        $showCityFilter = $accessService->isDeveloper($currentUser) || $accessService->isGeneralDirector($currentUser) || $accessService->isRegionalDirector($currentUser);
+        $showCityFilter = $accessService->isDeveloper($currentUser) || $accessService->isGeneralDirector($currentUser) || $accessService->isRegionalDirector($currentUser) || $accessService->isBranchDirector($currentUser);
     }
 @endphp
 

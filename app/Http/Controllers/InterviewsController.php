@@ -27,30 +27,25 @@ class InterviewsController extends Controller
             
             if ($hasCityId) {
                 // Фильтрация через city_id
-                if (($accessService->isManager($user) || $accessService->isBranchDirector($user)) && !empty($user->branch_id)) {
-                    // Директор и менеджер - только свой город
+                if ($accessService->isManager($user) && !empty($user->branch_id)) {
+                    // Менеджер - только свой город через branch_id
                     $cityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
                     if ($cityId) {
                         $q->where('city_id', $cityId);
                     } else {
                         $q->whereRaw('1=0');
                     }
-                } elseif ($accessService->isRegionalDirector($user)) {
-                    // Региональный директор - города своего региона
-                    $region = $accessService->regionName($user);
-                    if ($region) {
+                } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                    // Региональный директор и директор - города из списка
+                    $cityIds = $accessService->getDirectorCityIds($user);
+                    if (!empty($cityIds)) {
                         if ($filterCityId) {
                             // Если выбран конкретный город - проверяем доступ
-                            $cityExists = \App\Models\City::where('city_id', $filterCityId)
-                                ->where('region_name', $region)
-                                ->exists();
-                            if ($cityExists) {
+                            if (in_array($filterCityId, $cityIds)) {
                                 $q->where('city_id', $filterCityId);
                             }
                         } else {
-                            $q->whereHas('city', function ($query) use ($region) {
-                                $query->where('region_name', $region);
-                            });
+                            $q->whereIn('city_id', $cityIds);
                         }
                     } else {
                         $q->whereRaw('1=0');
@@ -65,14 +60,15 @@ class InterviewsController extends Controller
                     $q->whereHas('createdBy', function ($query) use ($user) {
                         $query->where('branch_id', $user->branch_id);
                     });
-                } elseif ($accessService->isRegionalDirector($user)) {
-                    $region = $accessService->regionName($user);
-                    if ($region) {
-                        $q->whereHas('createdBy', function ($query) use ($region) {
-                            $query->whereHas('city', function ($q) use ($region) {
-                                $q->where('region_name', $region);
-                            })->orWhereHas('branch.city', function ($q) use ($region) {
-                                $q->where('region_name', $region);
+                } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                    $cityIds = $accessService->getDirectorCityIds($user);
+                    if (!empty($cityIds)) {
+                        $q->whereHas('createdBy', function ($query) use ($cityIds) {
+                            $query->where(function ($q) use ($cityIds) {
+                                $q->whereIn('city_id', $cityIds)
+                                  ->orWhereHas('branch', function ($branchQuery) use ($cityIds) {
+                                      $branchQuery->whereIn('city_id', $cityIds);
+                                  });
                             });
                         });
                     } else {
@@ -144,13 +140,13 @@ class InterviewsController extends Controller
 
         // Получаем доступные города для фильтра
         $cities = collect();
-        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
+        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
             if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
                 $cities = \App\Models\City::orderBy('city_name')->get();
-            } elseif ($accessService->isRegionalDirector($user)) {
-                $region = $accessService->regionName($user);
-                if ($region) {
-                    $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
+                $cityIds = $accessService->getDirectorCityIds($user);
+                if (!empty($cityIds)) {
+                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
                 }
             }
         }
@@ -179,10 +175,10 @@ class InterviewsController extends Controller
             $cities = \App\Models\City::orderBy('city_name')->get();
             $showCitySelect = true;
         } elseif ($accessService->isRegionalDirector($user)) {
-            // Региональный директор - города своего региона
-            $region = $accessService->regionName($user);
-            if ($region) {
-                $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+            // Региональный директор - города из списка
+                $cityIds = $accessService->getDirectorCityIds($user);
+            if (!empty($cityIds)) {
+                $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
                 $showCitySelect = true;
             }
         }
@@ -267,10 +263,10 @@ class InterviewsController extends Controller
             $cities = \App\Models\City::orderBy('city_name')->get();
             $showCitySelect = true;
         } elseif ($accessService->isRegionalDirector($user)) {
-            // Региональный директор - города своего региона
-            $region = $accessService->regionName($user);
-            if ($region) {
-                $cities = \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+            // Региональный директор - города из списка
+                $cityIds = $accessService->getDirectorCityIds($user);
+            if (!empty($cityIds)) {
+                $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
                 $showCitySelect = true;
             }
         }
@@ -366,10 +362,10 @@ class InterviewsController extends Controller
             // Все города
             return \App\Models\City::orderBy('city_name')->get();
         } elseif ($accessService->isRegionalDirector($user)) {
-            // Города своего региона
-            $region = $accessService->regionName($user);
-            if ($region) {
-                return \App\Models\City::where('region_name', $region)->orderBy('city_name')->get();
+            // Города из списка
+                $cityIds = $accessService->getDirectorCityIds($user);
+            if (!empty($cityIds)) {
+                return \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
             }
             return collect();
         } elseif (($accessService->isBranchDirector($user) || $accessService->isManager($user)) && !empty($user->branch_id)) {
@@ -389,13 +385,8 @@ class InterviewsController extends Controller
         if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
             return true;
         } elseif ($accessService->isRegionalDirector($user)) {
-            $region = $accessService->regionName($user);
-            if ($region) {
-                return \App\Models\City::where('city_id', $cityId)
-                    ->where('region_name', $region)
-                    ->exists();
-            }
-            return false;
+                $cityIds = $accessService->getDirectorCityIds($user);
+            return in_array($cityId, $cityIds);
         } elseif (($accessService->isBranchDirector($user) || $accessService->isManager($user)) && !empty($user->branch_id)) {
             $userCityId = \App\Models\Branch::where('branch_id', $user->branch_id)->value('city_id');
             return (int) $userCityId === $cityId;

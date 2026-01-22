@@ -4,7 +4,21 @@
 @section('content')
 <div class="vp-toolbar mb-3">
     <h3 class="m-0">Города</h3>
-    <a class="btn btn-primary btn-sm vp-btn" href="{{ route('cities.import.form') }}">Импорт</a>
+    <div class="d-flex gap-2">
+        @php
+            $user = auth()->user();
+            $accessService = app(\App\Services\AccessService::class);
+            $canAddCity = $user && (
+                $accessService->isDeveloper($user) || 
+                $accessService->isGeneralDirector($user) || 
+                $accessService->isRegionalDirector($user)
+            );
+        @endphp
+        @if($canAddCity)
+            <a class="btn btn-primary btn-sm vp-btn" href="{{ route('cities.create') }}">Добавить город</a>
+        @endif
+        <a class="btn btn-primary btn-sm vp-btn" href="{{ route('cities.import.form') }}">Импорт</a>
+    </div>
 </div>
 
 @if(session('ok'))

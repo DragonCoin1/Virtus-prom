@@ -57,7 +57,6 @@
                 <th>ФИО</th>
                 <th>Роль</th>
                 <th>Город</th>
-                <th>Филиал</th>
                 <th>Активен</th>
                 <th></th>
             </tr>
@@ -69,7 +68,6 @@
                     <td>{{ $user->user_full_name }}</td>
                     <td>{{ $roles[$user->role_id] ?? ('#' . $user->role_id) }}</td>
                     <td>{{ $user->city?->city_name ?? '—' }}</td>
-                    <td>{{ $user->branch?->branch_name ?? '—' }}</td>
                     <td>{{ (int) $user->user_is_active === 1 ? 'Да' : 'Нет' }}</td>
                     <td class="text-end">
                         @if(isset($canManageUsers) && $canManageUsers)
@@ -84,7 +82,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="text-center text-muted">Нет пользователей</td>
+                    <td colspan="6" class="text-center text-muted">Нет пользователей</td>
                 </tr>
             @endforelse
             </tbody>

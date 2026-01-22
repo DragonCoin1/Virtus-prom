@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\City;
+use App\Services\AccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -40,6 +41,50 @@ class CitiesController extends Controller
             ->appends($request->query());
 
         return view('cities.index', compact('cities'));
+    }
+
+    public function create(AccessService $accessService)
+    {
+        $user = auth()->user();
+        if (!$user || !(
+            $accessService->isDeveloper($user) || 
+            $accessService->isGeneralDirector($user) || 
+            $accessService->isRegionalDirector($user)
+        )) {
+            abort(403, 'Нет прав на добавление городов');
+        }
+        
+        return view('cities.create');
+    }
+
+    public function store(Request $request, AccessService $accessService)
+    {
+        $user = auth()->user();
+        if (!$user || !(
+            $accessService->isDeveloper($user) || 
+            $accessService->isGeneralDirector($user) || 
+            $accessService->isRegionalDirector($user)
+        )) {
+            abort(403, 'Нет прав на добавление городов');
+        }
+
+        $request->validate([
+            'city_name' => ['required', 'string', 'max:255'],
+            'region_name' => ['nullable', 'string', 'max:255'],
+            'population' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        City::updateOrCreate(
+            ['city_name' => trim($request->input('city_name'))],
+            [
+                'region_name' => $request->filled('region_name') ? trim($request->input('region_name')) : null,
+                'population' => $request->filled('population') ? (int) $request->input('population') : null,
+                'is_active' => $request->has('is_active') ? 1 : 0,
+            ]
+        );
+
+        return redirect()->route('cities.index')->with('ok', 'Город успешно добавлен');
     }
 
     public function importForm()

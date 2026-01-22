@@ -71,7 +71,8 @@ class AccessService
 
     public function isBranchScoped(User $user): bool
     {
-        return $this->isBranchDirector($user) || $this->isManager($user) || $this->isPromoter($user);
+        // Директор больше не считается branch-scoped, так как работает через города
+        return $this->isManager($user) || $this->isPromoter($user);
     }
 
     public function regionName(User $user): ?string
@@ -137,17 +138,15 @@ class AccessService
             return false;
         }
 
-        if ($this->isRegionalDirector($user)) {
-            $region = $this->regionName($user);
-            if (!$region) {
+        if ($this->isRegionalDirector($user) || $this->isBranchDirector($user)) {
+            $cityIds = $this->getDirectorCityIds($user);
+            if (empty($cityIds)) {
                 return false;
             }
 
             return Branch::query()
                 ->where('branch_id', $branchId)
-                ->whereHas('city', function (Builder $query) use ($region): void {
-                    $query->where('region_name', $region);
-                })
+                ->whereIn('city_id', $cityIds)
                 ->exists();
         }
 
@@ -178,14 +177,14 @@ class AccessService
             return $query;
         }
 
-        if ($this->isRegionalDirector($user)) {
-            $region = $this->regionName($user);
-            if (!$region) {
+        if ($this->isRegionalDirector($user) || $this->isBranchDirector($user)) {
+            $cityIds = $this->getDirectorCityIds($user);
+            if (empty($cityIds)) {
                 return $query->whereRaw('1=0');
             }
 
-            return $query->whereHas('branch.city', function (Builder $query) use ($region): void {
-                $query->where('region_name', $region);
+            return $query->whereHas('branch', function (Builder $query) use ($cityIds): void {
+                $query->whereIn('city_id', $cityIds);
             });
         }
 
@@ -195,6 +194,44 @@ class AccessService
 
         return $query->whereRaw('1=0');
     }
+    
+    /**
+     * Получить список city_id для регионального директора или директора филиала
+     */
+    public function getRegionalDirectorCityIds(User $user): array
+    {
+        // Если есть связь many-to-many через user_cities, используем её
+        if ($user->cities()->exists()) {
+            return $user->cities()->get()->pluck('city_id')->toArray();
+        }
+        
+        // Для regional_director используем старую логику через region_name
+        if ($this->isRegionalDirector($user)) {
+            $region = $this->regionName($user);
+            if (!$region) {
+                return [];
+            }
+            
+            return City::query()
+                ->where('region_name', $region)
+                ->pluck('city_id')
+                ->toArray();
+        }
+        
+        // Для branch_director возвращаем пустой массив, если нет связи через user_cities
+        return [];
+    }
+    
+    /**
+     * Получить список city_id для директора (regional_director или branch_director)
+     */
+    public function getDirectorCityIds(User $user): array
+    {
+        if ($this->isRegionalDirector($user) || $this->isBranchDirector($user)) {
+            return $this->getRegionalDirectorCityIds($user);
+        }
+        return [];
+    }
 
     public function scopeUsers(Builder $query, User $user): Builder
     {
@@ -202,18 +239,17 @@ class AccessService
             return $query;
         }
 
-        if ($this->isRegionalDirector($user)) {
-            $region = $this->regionName($user);
-            if (!$region) {
+        if ($this->isRegionalDirector($user) || $this->isBranchDirector($user)) {
+            $cityIds = $this->getDirectorCityIds($user);
+            if (empty($cityIds)) {
                 return $query->whereRaw('1=0');
             }
 
-            return $query->where(function (Builder $query) use ($region): void {
-                $query->whereHas('city', function (Builder $query) use ($region): void {
-                    $query->where('region_name', $region);
-                })->orWhereHas('branch.city', function (Builder $query) use ($region): void {
-                    $query->where('region_name', $region);
-                });
+            return $query->where(function (Builder $query) use ($cityIds): void {
+                $query->whereIn('city_id', $cityIds)
+                    ->orWhereHas('branch', function (Builder $query) use ($cityIds): void {
+                        $query->whereIn('city_id', $cityIds);
+                    });
             });
         }
 
@@ -230,15 +266,13 @@ class AccessService
             return $query;
         }
 
-        if ($this->isRegionalDirector($user)) {
-            $region = $this->regionName($user);
-            if (!$region) {
+        if ($this->isRegionalDirector($user) || $this->isBranchDirector($user)) {
+            $cityIds = $this->getDirectorCityIds($user);
+            if (empty($cityIds)) {
                 return $query->whereRaw('1=0');
             }
 
-            return $query->whereHas('city', function (Builder $query) use ($region): void {
-                $query->where('region_name', $region);
-            });
+            return $query->whereIn('city_id', $cityIds);
         }
 
         if ($this->isBranchScoped($user) && !empty($user->branch_id)) {
@@ -254,11 +288,24 @@ class AccessService
             return true;
         }
 
-        if ($this->isRegionalDirector($user)) {
-            $region = $this->regionName($user);
-            $targetRegion = $this->regionName($target);
-
-            return !empty($region) && !empty($targetRegion) && $region === $targetRegion;
+        if ($this->isRegionalDirector($user) || $this->isBranchDirector($user)) {
+            $userCityIds = $this->getDirectorCityIds($user);
+            if (empty($userCityIds)) {
+                return false;
+            }
+            
+            // Проверяем, есть ли у target города из списка user
+            if ($target->cities()->exists()) {
+                $targetCityIds = $target->cities()->get()->pluck('city_id')->toArray();
+                return !empty(array_intersect($userCityIds, $targetCityIds));
+            }
+            
+            // Если у target нет связи через cities, проверяем через city_id
+            if (!empty($target->city_id)) {
+                return in_array($target->city_id, $userCityIds);
+            }
+            
+            return false;
         }
 
         if ($this->isBranchScoped($user) && !empty($user->branch_id)) {
@@ -313,29 +360,37 @@ class AccessService
                 return false;
             }
 
-            $region = $this->regionName($user);
-            if (!$region) {
+            $userCityIds = $this->getDirectorCityIds($user);
+            if (empty($userCityIds)) {
                 return false;
             }
 
             if ($branchId) {
-                return Branch::query()
+                $branchCityId = Branch::query()
                     ->where('branch_id', $branchId)
-                    ->whereHas('city', function (Builder $query) use ($region): void {
-                        $query->where('region_name', $region);
-                    })
-                    ->exists();
+                    ->value('city_id');
+                return $branchCityId && in_array($branchCityId, $userCityIds);
             }
 
-            return City::query()
-                ->where('city_id', $cityId)
-                ->where('region_name', $region)
-                ->exists();
+            return in_array($cityId, $userCityIds);
         }
 
         if ($role === 'branch_director') {
-            return $targetRole === 'manager'
-                && $this->canAccessBranch($user, $branchId ?? $user->branch_id);
+            // Директор может создавать только менеджеров
+            if ($targetRole !== 'manager') {
+                return false;
+            }
+            
+            // Если cityId передан, проверяем, что он входит в список городов директора
+            if ($cityId) {
+                $userCityIds = $this->getDirectorCityIds($user);
+                return !empty($userCityIds) && in_array($cityId, $userCityIds);
+            }
+            
+            // Если cityId не передан (например, при фильтрации ролей в форме),
+            // разрешаем создание менеджера, если у директора есть хотя бы один город
+            $userCityIds = $this->getDirectorCityIds($user);
+            return !empty($userCityIds);
         }
 
         if ($role === 'manager') {
@@ -353,14 +408,14 @@ class AccessService
         }
 
         // Фильтруем routes через route_actions -> promoter -> branch
-        if ($this->isRegionalDirector($user)) {
-            $region = $this->regionName($user);
-            if (!$region) {
+        if ($this->isRegionalDirector($user) || $this->isBranchDirector($user)) {
+            $cityIds = $this->getDirectorCityIds($user);
+            if (empty($cityIds)) {
                 return $query->whereRaw('1=0');
             }
 
-            return $query->whereHas('routeActions.promoter.branch.city', function (Builder $query) use ($region): void {
-                $query->where('region_name', $region);
+            return $query->whereHas('routeActions.promoter.branch', function (Builder $query) use ($cityIds): void {
+                $query->whereIn('city_id', $cityIds);
             });
         }
 
@@ -380,14 +435,14 @@ class AccessService
         }
 
         // Фильтруем route_actions через promoter -> branch
-        if ($this->isRegionalDirector($user)) {
-            $region = $this->regionName($user);
-            if (!$region) {
+        if ($this->isRegionalDirector($user) || $this->isBranchDirector($user)) {
+            $cityIds = $this->getDirectorCityIds($user);
+            if (empty($cityIds)) {
                 return $query->whereRaw('1=0');
             }
 
-            return $query->whereHas('promoter.branch.city', function (Builder $query) use ($region): void {
-                $query->where('region_name', $region);
+            return $query->whereHas('promoter.branch', function (Builder $query) use ($cityIds): void {
+                $query->whereIn('city_id', $cityIds);
             });
         }
 

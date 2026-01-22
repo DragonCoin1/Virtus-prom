@@ -31,7 +31,7 @@
         $showCityFilter = false;
         if ($user ?? false) {
             $accessService = app(\App\Services\AccessService::class);
-            $showCityFilter = $accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user);
+            $showCityFilter = $accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user);
         }
     @endphp
     <form class="row g-2 mb-3" method="GET" action="{{ route('ad_residuals.index') }}">
@@ -53,17 +53,6 @@
                 </div>
             </div>
         @endif
-        <div class="col-md-3">
-            <label class="form-label">Филиал</label>
-            <select class="form-select" name="branch_id">
-                <option value="">Все филиалы</option>
-                @foreach($branches as $branch)
-                    <option value="{{ $branch->branch_id }}" {{ (string) request('branch_id') === (string) $branch->branch_id ? 'selected' : '' }}>
-                        {{ $branch->branch_name }} ({{ $branch->city?->city_name }})
-                    </option>
-                @endforeach
-            </select>
-        </div>
         <div class="col-md-2">
             <input class="form-control" name="ad_type" placeholder="Тип рекламы" value="{{ request('ad_type') }}">
         </div>
@@ -82,7 +71,7 @@
         <table class="table table-striped align-middle">
             <thead>
             <tr>
-                <th>Филиал</th>
+                <th>Город</th>
                 <th>Тип</th>
                 <th>Получено</th>
                 <th>Остаток</th>
@@ -94,7 +83,7 @@
             <tbody>
             @forelse($residuals as $residual)
                 <tr>
-                    <td>{{ $residual->branch?->branch_name ?? '—' }}</td>
+                    <td>{{ $residual->branch?->city?->city_name ?? '—' }}</td>
                     <td>
                         @if($residual->ad_type === 'листовки')
                             Листовки
