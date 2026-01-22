@@ -51,7 +51,12 @@ class AuthController extends Controller
             return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
         }
 
-        $eloquentUser = \App\Models\User::find($user->id);
+        $userId = $user->id ?? $user->user_id ?? null;
+        if (!$userId) {
+            return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
+        }
+
+        $eloquentUser = \App\Models\User::find($userId);
 
         if (!$eloquentUser || (int)$eloquentUser->user_is_active !== 1) {
             return back()->withErrors(['user_login' => 'Аккаунт отключён']);

@@ -232,6 +232,10 @@ body.vp-body{
     width: 140px;
 }
 
+.vp-filter-date-half{
+    width: 70px;
+}
+
 .vp-filter-select{
     min-width: 180px;
 }
