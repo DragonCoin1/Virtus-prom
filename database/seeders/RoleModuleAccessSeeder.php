@@ -49,8 +49,8 @@ class RoleModuleAccessSeeder extends Seeder
                 DB::table('role_module_access')->insert([
                     'role_id' => $roles['manager'],
                     'module_code' => $m,
-                    'can_view' => 1,
-                    'can_edit' => $m === 'salary' ? 0 : 1,
+                    'can_view' => $m === 'ad_templates' ? 0 : 1,
+                    'can_edit' => in_array($m, ['salary', 'ad_templates'], true) ? 0 : 1,
                 ]);
             }
         }
@@ -61,7 +61,7 @@ class RoleModuleAccessSeeder extends Seeder
                     'role_id' => $roles['promoter'],
                     'module_code' => $m,
                     'can_view' => 1,
-                    'can_edit' => 0,
+                    'can_edit' => $m === 'salary' ? 1 : 0,
                 ]);
             }
         }

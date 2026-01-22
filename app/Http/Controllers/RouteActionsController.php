@@ -6,6 +6,8 @@ use App\Models\AdTemplate;
 use App\Models\Promoter;
 use App\Models\Route;
 use App\Models\RouteAction;
+use App\Services\AccessService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -13,9 +15,14 @@ use Illuminate\Validation\Rule;
 
 class RouteActionsController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, AccessService $accessService)
     {
-        $promoters = Promoter::orderBy('promoter_full_name')->get();
+        $promotersQuery = Promoter::orderBy('promoter_full_name');
+        $user = $request->user();
+        if ($user) {
+            $accessService->scopePromoters($promotersQuery, $user);
+        }
+        $promoters = $promotersQuery->get();
         $routesQuery = Route::query();
         if (Schema::hasColumn('routes', 'sort_order')) {
             $routesQuery->orderBy('sort_order');
@@ -23,6 +30,11 @@ class RouteActionsController extends Controller
         $routes = $routesQuery->orderByCodeNatural()->get();
 
         $q = RouteAction::query()->with(['promoter', 'route', 'createdBy', 'templates']);
+        if ($user) {
+            $q->whereHas('promoter', function (Builder $query) use ($accessService, $user): void {
+                $accessService->scopePromoters($query, $user);
+            });
+        }
 
         $hasFilters = false;
 
@@ -82,9 +94,14 @@ class RouteActionsController extends Controller
         ));
     }
 
-    public function create()
+    public function create(AccessService $accessService)
     {
-        $promoters = Promoter::orderBy('promoter_full_name')->get();
+        $promotersQuery = Promoter::orderBy('promoter_full_name');
+        $user = auth()->user();
+        if ($user) {
+            $accessService->scopePromoters($promotersQuery, $user);
+        }
+        $promoters = $promotersQuery->get();
         $routesQuery = Route::query();
         if (Schema::hasColumn('routes', 'sort_order')) {
             $routesQuery->orderBy('sort_order');
@@ -99,9 +116,13 @@ class RouteActionsController extends Controller
         return view('route_actions.create', compact('promoters', 'routes', 'leafletTemplates'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, AccessService $accessService)
     {
         $data = $this->validateAction($request);
+        $user = $request->user();
+        if ($user && !$accessService->canAccessPromoterId($user, (int) $data['promoter_id'])) {
+            abort(403, 'Нет доступа к промоутеру');
+        }
 
         $action = RouteAction::create([
             'action_date' => $data['action_date'],
@@ -141,11 +162,19 @@ class RouteActionsController extends Controller
         return redirect()->route('module.route_actions')->with('ok', 'Запись разноски добавлена');
     }
 
-    public function edit(RouteAction $routeAction)
+    public function edit(RouteAction $routeAction, AccessService $accessService)
     {
-        $routeAction->load(['templates']);
+        $routeAction->load(['templates', 'promoter']);
+        $user = auth()->user();
+        if ($user && !$accessService->canAccessPromoter($user, $routeAction->promoter)) {
+            abort(403, 'Нет доступа к промоутеру');
+        }
 
-        $promoters = Promoter::orderBy('promoter_full_name')->get();
+        $promotersQuery = Promoter::orderBy('promoter_full_name');
+        if ($user) {
+            $accessService->scopePromoters($promotersQuery, $user);
+        }
+        $promoters = $promotersQuery->get();
         $routesQuery = Route::query();
         if (Schema::hasColumn('routes', 'sort_order')) {
             $routesQuery->orderBy('sort_order');
@@ -166,9 +195,13 @@ class RouteActionsController extends Controller
         return view('route_actions.edit', compact('routeAction', 'promoters', 'routes', 'leafletTemplates'));
     }
 
-    public function update(Request $request, RouteAction $routeAction)
+    public function update(Request $request, RouteAction $routeAction, AccessService $accessService)
     {
         $data = $this->validateAction($request);
+        $user = $request->user();
+        if ($user && !$accessService->canAccessPromoterId($user, (int) $data['promoter_id'])) {
+            abort(403, 'Нет доступа к промоутеру');
+        }
 
         $routeAction->update([
             'action_date' => $data['action_date'],
@@ -204,8 +237,14 @@ class RouteActionsController extends Controller
         return redirect()->route('module.route_actions')->with('ok', 'Запись разноски обновлена');
     }
 
-    public function destroy(RouteAction $routeAction)
+    public function destroy(RouteAction $routeAction, AccessService $accessService)
     {
+        $routeAction->load('promoter');
+        $user = auth()->user();
+        if ($user && !$accessService->canAccessPromoter($user, $routeAction->promoter)) {
+            abort(403, 'Нет доступа к промоутеру');
+        }
+
         $routeAction->templates()->detach();
         $routeAction->delete();
 

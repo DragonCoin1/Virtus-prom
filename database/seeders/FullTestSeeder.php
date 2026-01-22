@@ -113,9 +113,9 @@ class FullTestSeeder extends Seeder
                     if (in_array('role_id', $cols, true)) $row['role_id'] = $roleIds['manager'];
                     $row[$moduleField] = $m;
 
-                    if (in_array('can_view', $cols, true)) $row['can_view'] = 1;
+                    if (in_array('can_view', $cols, true)) $row['can_view'] = $m === 'ad_templates' ? 0 : 1;
                     if (in_array('can_add', $cols, true)) $row['can_add'] = 1;
-                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = $m === 'salary' ? 0 : 1;
+                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = in_array($m, ['salary', 'ad_templates'], true) ? 0 : 1;
                     if (in_array('can_delete', $cols, true)) $row['can_delete'] = 1;
 
                     if (in_array('created_at', $cols, true)) $row['created_at'] = now();
@@ -132,7 +132,7 @@ class FullTestSeeder extends Seeder
 
                     if (in_array('can_view', $cols, true)) $row['can_view'] = 1;
                     if (in_array('can_add', $cols, true)) $row['can_add'] = 0;
-                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = 0;
+                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = $m === 'salary' ? 1 : 0;
                     if (in_array('can_delete', $cols, true)) $row['can_delete'] = 0;
 
                     if (in_array('created_at', $cols, true)) $row['created_at'] = now();
