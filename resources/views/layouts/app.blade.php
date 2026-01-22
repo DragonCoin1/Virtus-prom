@@ -25,16 +25,30 @@
         $canManageUsers = false;
 
         if (auth()->check()) {
-            $roleAccess = DB::table('role_module_access')
-                ->where('role_id', auth()->user()->role_id)
-                ->get();
+            $user = auth()->user();
+            $accessService = app(AccessService::class);
+            
+            // Для developer - все права автоматически
+            if ($accessService->isDeveloper($user)) {
+                $allModules = ['promoters', 'routes', 'route_actions', 'cards', 'interviews', 'salary', 'keys_registry', 'reports', 'ad_templates', 'ad_residuals', 'instructions'];
+                foreach ($allModules as $m) {
+                    $canViewModules[$m] = true;
+                    $canEditModules[$m] = true;
+                }
+                $canManageUsers = true;
+            } else {
+                // Для остальных - из БД
+                $roleAccess = DB::table('role_module_access')
+                    ->where('role_id', $user->role_id)
+                    ->get();
 
-            foreach ($roleAccess as $accessRow) {
-                $canViewModules[$accessRow->module_code] = (int) $accessRow->can_view === 1;
-                $canEditModules[$accessRow->module_code] = (int) $accessRow->can_edit === 1;
+                foreach ($roleAccess as $accessRow) {
+                    $canViewModules[$accessRow->module_code] = (int) $accessRow->can_view === 1;
+                    $canEditModules[$accessRow->module_code] = (int) $accessRow->can_edit === 1;
+                }
+
+                $canManageUsers = !$accessService->isPromoter($user);
             }
-
-            $canManageUsers = !app(AccessService::class)->isPromoter(auth()->user());
         }
     @endphp
     <header class="vp-header">
@@ -78,9 +92,10 @@
                     <a class="vp-nav-link {{ request()->routeIs('ad_residuals.*') ? 'active' : '' }}" href="{{ route('ad_residuals.index') }}">Остатки</a>
                 @endif
 
-                @if(!empty($canViewModules['instructions']))
+                {{-- Инструкции скрыты по требованию --}}
+                {{-- @if(!empty($canViewModules['instructions']))
                     <a class="vp-nav-link {{ request()->routeIs('instructions.*') ? 'active' : '' }}" href="{{ route('instructions.index') }}">Инструкции</a>
-                @endif
+                @endif --}}
 
                 @if($canManageUsers)
                     <a class="vp-nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">Пользователи</a>

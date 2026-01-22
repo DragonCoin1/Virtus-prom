@@ -57,7 +57,17 @@
             @forelse($residuals as $residual)
                 <tr>
                     <td>{{ $residual->branch?->branch_name ?? '—' }}</td>
-                    <td>{{ $residual->ad_type }}</td>
+                    <td>
+                        @if($residual->ad_type === 'листовки')
+                            Листовки
+                        @elseif($residual->ad_type === 'расклейка')
+                            Расклейка
+                        @elseif($residual->ad_type === 'визитки')
+                            Визитки
+                        @else
+                            {{ $residual->ad_type }}
+                        @endif
+                    </td>
                     <td>{{ $residual->ad_amount }}</td>
                     <td><strong>{{ $residual->calculated_remaining ?? $residual->remaining_amount }}</strong></td>
                     <td>{{ $residual->received_at?->format('d.m.Y') }}</td>
