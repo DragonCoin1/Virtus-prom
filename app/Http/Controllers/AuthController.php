@@ -51,7 +51,8 @@ class AuthController extends Controller
             return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
         }
 
-        $userId = $user->id ?? $user->user_id ?? null;
+        // Получаем ID пользователя - primary key всегда 'id' в Laravel
+        $userId = $user->id ?? null;
         if (!$userId) {
             return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
         }

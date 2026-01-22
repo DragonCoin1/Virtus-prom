@@ -34,8 +34,25 @@ class UsersController extends Controller
     {
         $user = $request->user();
         $roles = $this->rolesList();
-        $cities = City::orderBy('city_name')->get();
-        $branches = Branch::orderBy('branch_name')->get();
+        
+        // Разработчик и генеральный директор видят все города и филиалы
+        $citiesQuery = City::query();
+        $branchesQuery = Branch::query();
+        
+        if ($user && !$accessService->isFullAccess($user)) {
+            $accessService->scopeBranches($branchesQuery, $user);
+            // Для городов используем те, что связаны с доступными филиалами
+            $accessibleBranches = $branchesQuery->get();
+            $accessibleCityIds = $accessibleBranches->pluck('city_id')->unique()->filter();
+            if ($accessibleCityIds->isNotEmpty()) {
+                $citiesQuery->whereIn('city_id', $accessibleCityIds);
+            } else {
+                $citiesQuery->whereRaw('1=0');
+            }
+        }
+        
+        $cities = $citiesQuery->orderBy('city_name')->get();
+        $branches = $branchesQuery->orderBy('branch_name')->get();
 
         return view('users.create', compact('roles', 'cities', 'branches', 'user'));
     }
@@ -80,8 +97,25 @@ class UsersController extends Controller
         }
 
         $roles = $this->rolesList();
-        $cities = City::orderBy('city_name')->get();
-        $branches = Branch::orderBy('branch_name')->get();
+        
+        // Разработчик и генеральный директор видят все города и филиалы
+        $citiesQuery = City::query();
+        $branchesQuery = Branch::query();
+        
+        if ($actor && !$accessService->isFullAccess($actor)) {
+            $accessService->scopeBranches($branchesQuery, $actor);
+            // Для городов используем те, что связаны с доступными филиалами
+            $accessibleBranches = $branchesQuery->get();
+            $accessibleCityIds = $accessibleBranches->pluck('city_id')->unique()->filter();
+            if ($accessibleCityIds->isNotEmpty()) {
+                $citiesQuery->whereIn('city_id', $accessibleCityIds);
+            } else {
+                $citiesQuery->whereRaw('1=0');
+            }
+        }
+        
+        $cities = $citiesQuery->orderBy('city_name')->get();
+        $branches = $branchesQuery->orderBy('branch_name')->get();
 
         return view('users.edit', compact('user', 'roles', 'cities', 'branches'));
     }
