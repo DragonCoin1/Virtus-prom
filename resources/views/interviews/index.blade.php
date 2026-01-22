@@ -19,7 +19,9 @@
 
 <div class="vp-toolbar mb-3">
     <h3 class="m-0">Собеседования</h3>
-    <a class="btn btn-primary btn-sm vp-btn" href="{{ route('interviews.create') }}">+ Добавить</a>
+    @if(!empty($canEditModules['interviews']))
+        <a class="btn btn-primary btn-sm vp-btn" href="{{ route('interviews.create') }}">+ Добавить</a>
+    @endif
 </div>
 
 @if(session('ok'))
@@ -80,7 +82,9 @@
                 <th style="width: 160px;">Источник</th>
                 <th style="width: 170px;">Статус</th>
                 <th>Комментарий</th>
-                <th style="width: 90px;"></th>
+                @if(!empty($canEditModules['interviews']))
+                    <th style="width: 90px;"></th>
+                @endif
             </tr>
             </thead>
             <tbody>
@@ -96,35 +100,37 @@
                     <td>{{ $i->source ?? '—' }}</td>
                     <td><span class="badge rounded-pill {{ $s['badge'] }}">{{ $s['label'] }}</span></td>
                     <td>{{ $i->comment ?? '—' }}</td>
-                    <td class="text-end">
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                ⋮
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('interviews.edit', $i) }}">Править</a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form method="POST"
-                                          action="{{ route('interviews.destroy', $i) }}"
-                                          onsubmit="return confirm('Удалить собеседование?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button class="dropdown-item text-danger" type="submit">Удалить</button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
-                    </td>
+                    @if(!empty($canEditModules['interviews']))
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    ⋮
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('interviews.edit', $i) }}">Править</a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form method="POST"
+                                              action="{{ route('interviews.destroy', $i) }}"
+                                              onsubmit="return confirm('Удалить собеседование?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button class="dropdown-item text-danger" type="submit">Удалить</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    @endif
                 </tr>
             @endforeach
 
             @if($interviews->count() === 0)
                 <tr>
-                    <td colspan="8" class="text-center text-muted p-4">Пока нет собеседований</td>
+                    <td colspan="{{ !empty($canEditModules['interviews']) ? 8 : 7 }}" class="text-center text-muted p-4">Пока нет собеседований</td>
                 </tr>
             @endif
             </tbody>
