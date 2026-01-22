@@ -114,6 +114,19 @@ class AccessService
             || $this->isBranchDirector($user);
     }
 
+    public function canManageResiduals(User $user): bool
+    {
+        return $this->isDeveloper($user)
+            || $this->isGeneralDirector($user)
+            || $this->isRegionalDirector($user)
+            || $this->isBranchDirector($user);
+    }
+
+    public function canManageInstructions(User $user): bool
+    {
+        return $this->isDeveloper($user) || $this->isGeneralDirector($user);
+    }
+
     public function canAccessBranch(User $user, ?int $branchId): bool
     {
         if ($this->isFullAccess($user)) {
@@ -201,6 +214,30 @@ class AccessService
                 })->orWhereHas('branch.city', function (Builder $query) use ($region): void {
                     $query->where('region_name', $region);
                 });
+            });
+        }
+
+        if ($this->isBranchScoped($user) && !empty($user->branch_id)) {
+            return $query->where('branch_id', $user->branch_id);
+        }
+
+        return $query->whereRaw('1=0');
+    }
+
+    public function scopeBranches(Builder $query, User $user): Builder
+    {
+        if ($this->isFullAccess($user)) {
+            return $query;
+        }
+
+        if ($this->isRegionalDirector($user)) {
+            $region = $this->regionName($user);
+            if (!$region) {
+                return $query->whereRaw('1=0');
+            }
+
+            return $query->whereHas('city', function (Builder $query) use ($region): void {
+                $query->where('region_name', $region);
             });
         }
 

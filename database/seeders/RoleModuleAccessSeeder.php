@@ -21,6 +21,8 @@ class RoleModuleAccessSeeder extends Seeder
             'keys_registry',
             'reports',
             'ad_templates',
+            'ad_residuals',
+            'instructions',
         ];
 
         $fullAccessRoles = [
@@ -35,11 +37,14 @@ class RoleModuleAccessSeeder extends Seeder
                 continue;
             }
             foreach ($modules as $m) {
+                $instructionOnly = $m === 'instructions'
+                    && in_array($roleName, ['regional_director', 'branch_director'], true);
+
                 DB::table('role_module_access')->insert([
                     'role_id' => $roles[$roleName],
                     'module_code' => $m,
-                    'can_view' => 1,
-                    'can_edit' => 1,
+                    'can_view' => $instructionOnly ? 0 : 1,
+                    'can_edit' => $instructionOnly ? 0 : 1,
                 ]);
             }
         }
@@ -49,8 +54,8 @@ class RoleModuleAccessSeeder extends Seeder
                 DB::table('role_module_access')->insert([
                     'role_id' => $roles['manager'],
                     'module_code' => $m,
-                    'can_view' => $m === 'ad_templates' ? 0 : 1,
-                    'can_edit' => in_array($m, ['salary', 'ad_templates'], true) ? 0 : 1,
+                    'can_view' => in_array($m, ['ad_templates', 'ad_residuals', 'instructions'], true) ? 0 : 1,
+                    'can_edit' => in_array($m, ['salary', 'ad_templates', 'ad_residuals', 'instructions'], true) ? 0 : 1,
                 ]);
             }
         }

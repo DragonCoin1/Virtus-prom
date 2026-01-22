@@ -77,13 +77,30 @@ class FullTestSeeder extends Seeder
             if (in_array('module_code', $cols, true)) $moduleField = 'module_code';
             elseif (in_array('module_key', $cols, true)) $moduleField = 'module_key';
 
-            $modules = ['promoters','route_actions','cards','interviews','salary','reports','routes','ad_templates','keys_registry'];
+            $modules = [
+                'promoters',
+                'route_actions',
+                'cards',
+                'interviews',
+                'salary',
+                'reports',
+                'routes',
+                'ad_templates',
+                'ad_residuals',
+                'instructions',
+                'keys_registry',
+            ];
 
             $rows = [];
             if ($moduleField) {
                 $fullAccessRoles = [
                     $roleIds['developer'],
                     $roleIds['general_director'],
+                    $roleIds['regional_director'],
+                    $roleIds['branch_director'],
+                ];
+
+                $instructionRestricted = [
                     $roleIds['regional_director'],
                     $roleIds['branch_director'],
                 ];
@@ -95,10 +112,12 @@ class FullTestSeeder extends Seeder
                         if (in_array('role_id', $cols, true)) $row['role_id'] = $rid;
                         $row[$moduleField] = $m;
 
-                        if (in_array('can_view', $cols, true)) $row['can_view'] = 1;
-                        if (in_array('can_add', $cols, true)) $row['can_add'] = 1;
-                        if (in_array('can_edit', $cols, true)) $row['can_edit'] = 1;
-                        if (in_array('can_delete', $cols, true)) $row['can_delete'] = 1;
+                        $instructionOnly = $m === 'instructions' && in_array($rid, $instructionRestricted, true);
+
+                        if (in_array('can_view', $cols, true)) $row['can_view'] = $instructionOnly ? 0 : 1;
+                        if (in_array('can_add', $cols, true)) $row['can_add'] = $instructionOnly ? 0 : 1;
+                        if (in_array('can_edit', $cols, true)) $row['can_edit'] = $instructionOnly ? 0 : 1;
+                        if (in_array('can_delete', $cols, true)) $row['can_delete'] = $instructionOnly ? 0 : 1;
 
                         if (in_array('created_at', $cols, true)) $row['created_at'] = now();
                         if (in_array('updated_at', $cols, true)) $row['updated_at'] = now();
@@ -113,9 +132,13 @@ class FullTestSeeder extends Seeder
                     if (in_array('role_id', $cols, true)) $row['role_id'] = $roleIds['manager'];
                     $row[$moduleField] = $m;
 
-                    if (in_array('can_view', $cols, true)) $row['can_view'] = $m === 'ad_templates' ? 0 : 1;
+                    if (in_array('can_view', $cols, true)) {
+                        $row['can_view'] = in_array($m, ['ad_templates', 'ad_residuals', 'instructions'], true) ? 0 : 1;
+                    }
                     if (in_array('can_add', $cols, true)) $row['can_add'] = 1;
-                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = in_array($m, ['salary', 'ad_templates'], true) ? 0 : 1;
+                    if (in_array('can_edit', $cols, true)) {
+                        $row['can_edit'] = in_array($m, ['salary', 'ad_templates', 'ad_residuals', 'instructions'], true) ? 0 : 1;
+                    }
                     if (in_array('can_delete', $cols, true)) $row['can_delete'] = 1;
 
                     if (in_array('created_at', $cols, true)) $row['created_at'] = now();
@@ -235,146 +258,50 @@ class FullTestSeeder extends Seeder
     {
         if (!Schema::hasTable('promoters')) return;
 
-        $branchId = null;
-        if (Schema::hasColumn('promoters', 'branch_id') && Schema::hasTable('branches')) {
-            $branchId = DB::table('branches')->value('branch_id');
-        }
+        $rows = [
+            [
+                'promoter_full_name' => 'Иван Петров',
+                'promoter_phone' => '+7 999 111-22-33',
+                'promoter_status' => 'active',
+                'hired_at' => now()->subMonths(2)->format('Y-m-d'),
+            ],
+            [
+                'promoter_full_name' => 'Мария Сидорова',
+                'promoter_phone' => '+7 999 222-33-44',
+                'promoter_status' => 'active',
+                'hired_at' => now()->subMonths(3)->format('Y-m-d'),
+            ],
+        ];
 
-        $statuses = ['active', 'trainee', 'paused'];
+        $branchId = Schema::hasColumn('promoters', 'branch_id')
+            ? DB::table('branches')->value('branch_id')
+            : null;
 
-        $rows = [];
-        for ($i = 1; $i <= 18; $i++) {
-            $name = $this->fakeRuName($i);
-            $phone = '+79' . random_int(100000000, 999999999);
-
-            $hired = Carbon::now()->subDays(random_int(5, 120))->format('Y-m-d');
-
-            $status = $statuses[array_rand($statuses)];
-            $firedAt = null;
-
-            if ($i % 7 === 0) {
-                $firedAt = Carbon::now()->subDays(random_int(1, 30))->format('Y-m-d');
-                $status = 'fired';
+        foreach ($rows as $row) {
+            if ($branchId) {
+                $row['branch_id'] = $branchId;
             }
-
-            $rows[] = [
-                'branch_id' => $branchId,
-                'promoter_full_name' => $name,
-                'promoter_phone' => $phone,
-                'promoter_status' => $status,
-                'hired_at' => $hired,
-                'fired_at' => $firedAt,
-                'promoter_comment' => ($i % 5 === 0) ? 'тестовый комментарий' : null,
+            DB::table('promoters')->insert(array_merge($row, [
                 'created_at' => now(),
                 'updated_at' => now(),
-            ];
+            ]));
         }
-
-        DB::table('promoters')->insert($rows);
     }
 
     private function seedTemplates(): void
     {
         if (!Schema::hasTable('ad_templates')) return;
 
-        $hasActive = Schema::hasColumn('ad_templates', 'is_active');
-        $hasType = Schema::hasColumn('ad_templates', 'template_type');
-
-        $rows = [];
-        $names = [
-            'Листовка А (основная)',
-            'Листовка B (акция)',
-            'Листовка C (новый район)',
-            'Листовка D (ночная)',
-            'Листовка E (премиум)',
+        $templates = [
+            ['template_name' => 'Листовка A5', 'template_type' => 'leaflet', 'is_active' => 1],
+            ['template_name' => 'Листовка A6', 'template_type' => 'leaflet', 'is_active' => 1],
         ];
 
-        foreach ($names as $idx => $n) {
-            $row = [
-                'template_name' => $n,
+        foreach ($templates as $template) {
+            DB::table('ad_templates')->insert(array_merge($template, [
                 'created_at' => now(),
                 'updated_at' => now(),
-            ];
-            if ($hasType) $row['template_type'] = 'leaflet';
-            if ($hasActive) $row['is_active'] = ($idx === 3) ? 0 : 1;
-            $rows[] = $row;
-        }
-
-        DB::table('ad_templates')->insert($rows);
-    }
-
-    private function seedRouteActions(): void
-    {
-        if (!Schema::hasTable('route_actions')) return;
-        if (!Schema::hasTable('promoters') || !Schema::hasTable('routes')) return;
-
-        $promoters = DB::table('promoters')->pluck('promoter_id')->toArray();
-        $routes = DB::table('routes')->pluck('route_id')->toArray();
-
-        if (empty($promoters) || empty($routes)) return;
-
-        $hasIssuedLeaflets = Schema::hasColumn('route_actions', 'leaflets_issued');
-        $hasIssuedPosters = Schema::hasColumn('route_actions', 'posters_issued');
-        $hasIssuedCards = Schema::hasColumn('route_actions', 'cards_issued');
-
-        $templateIds = [];
-        if (Schema::hasTable('ad_templates')) {
-            if (Schema::hasColumn('ad_templates', 'is_active')) {
-                $templateIds = DB::table('ad_templates')->where('is_active', 1)->pluck('template_id')->toArray();
-            } else {
-                $templateIds = DB::table('ad_templates')->pluck('template_id')->toArray();
-            }
-        }
-
-        $today = Carbon::now()->startOfDay();
-
-        for ($d = 0; $d < 25; $d++) {
-            $date = $today->copy()->subDays($d)->format('Y-m-d');
-            $rowsCount = random_int(1, 5);
-
-            for ($k = 0; $k < $rowsCount; $k++) {
-                $leaflets = random_int(0, 250);
-                $boxes = random_int(0, 8);
-                $posters = random_int(0, 60);
-                $cards = random_int(0, 80);
-
-                $pay = ($boxes * 120) + (int)($leaflets * 0.8) + (int)($posters * 3) + (int)($cards * 0.5);
-
-                $insert = [
-                    'action_date' => $date,
-                    'promoter_id' => $promoters[array_rand($promoters)],
-                    'route_id' => $routes[array_rand($routes)],
-                    'leaflets_total' => $leaflets,
-                    'posters_total' => $posters,
-                    'cards_count' => $cards,
-                    'boxes_done' => $boxes,
-                    'payment_amount' => $pay,
-                    'action_comment' => (random_int(1, 10) === 1) ? 'тест' : null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-
-                if ($hasIssuedLeaflets) $insert['leaflets_issued'] = random_int(0, 300);
-                if ($hasIssuedPosters) $insert['posters_issued'] = random_int(0, 80);
-                if ($hasIssuedCards) $insert['cards_issued'] = random_int(0, 150);
-
-                $id = DB::table('route_actions')->insertGetId($insert, 'route_action_id');
-
-                if (Schema::hasTable('route_action_templates') && !empty($templateIds)) {
-                    $take = random_int(0, 2);
-                    if ($take > 0) {
-                        $picked = $this->pickSome($templateIds, $take);
-                        foreach ($picked as $tid) {
-                            DB::table('route_action_templates')->insert([
-                                'route_action_id' => $id,
-                                'template_id' => $tid,
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ]);
-                        }
-                    }
-                }
-            }
+            ]));
         }
     }
 
@@ -382,183 +309,108 @@ class FullTestSeeder extends Seeder
     {
         if (!Schema::hasTable('ad_residuals') || !Schema::hasTable('branches')) return;
 
-        $branchIds = DB::table('branches')->pluck('branch_id')->toArray();
-        if (empty($branchIds)) return;
+        $branches = DB::table('branches')->pluck('branch_id');
 
-        $types = ['leaflet', 'card', 'poster', 'other'];
         $rows = [];
-
-        foreach ($branchIds as $branchId) {
-            $itemsCount = random_int(2, 4);
-            for ($i = 0; $i < $itemsCount; $i++) {
-                $amount = random_int(200, 1200);
-                $remaining = random_int(0, $amount);
-                $rows[] = [
-                    'branch_id' => $branchId,
-                    'ad_type' => $types[array_rand($types)],
-                    'ad_amount' => $amount,
-                    'remaining_amount' => $remaining,
-                    'received_at' => Carbon::now()->subDays(random_int(1, 45))->format('Y-m-d'),
-                    'notes' => (random_int(1, 4) === 1) ? 'тестовые остатки' : null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
+        foreach ($branches as $branchId) {
+            $rows[] = [
+                'branch_id' => $branchId,
+                'ad_type' => 'leaflet',
+                'ad_amount' => 1000,
+                'remaining_amount' => 400,
+                'received_at' => now()->subDays(10)->format('Y-m-d'),
+                'notes' => 'Партия 1',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
         }
 
         DB::table('ad_residuals')->insert($rows);
+    }
+
+    private function seedRouteActions(): void
+    {
+        if (!Schema::hasTable('route_actions') || !Schema::hasTable('routes') || !Schema::hasTable('promoters')) return;
+
+        $routeId = DB::table('routes')->value('route_id');
+        $promoterId = DB::table('promoters')->value('promoter_id');
+
+        if (!$routeId || !$promoterId) return;
+
+        DB::table('route_actions')->insert([
+            'action_date' => now()->subDays(2)->format('Y-m-d'),
+            'promoter_id' => $promoterId,
+            'route_id' => $routeId,
+            'leaflets_total' => 500,
+            'leaflets_issued' => 300,
+            'posters_total' => 100,
+            'posters_issued' => 60,
+            'cards_count' => 200,
+            'cards_issued' => 150,
+            'boxes_done' => 5,
+            'payment_amount' => 1500,
+            'created_by' => DB::table('users')->value('id'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function seedInterviews(): void
     {
         if (!Schema::hasTable('interviews')) return;
 
-        $today = Carbon::now()->startOfDay();
-        $statuses = ['planned', 'came', 'no_show', 'hired', 'rejected'];
-
-        $hasNew = Schema::hasColumn('interviews', 'interview_candidate_name');
-        $hasTime = Schema::hasColumn('interviews', 'interview_time');
-
-        $rows = [];
-        for ($i = 1; $i <= 18; $i++) {
-            $date = $today->copy()->addDays(random_int(-2, 10))->format('Y-m-d');
-            $time = sprintf('%02d:%02d', random_int(10, 19), [0, 15, 30, 45][array_rand([0, 15, 30, 45])]);
-
-            if ($hasNew) {
-                $row = [
-                    'interview_date' => $date,
-                    'interview_candidate_name' => 'Кандидат ' . $i,
-                    'interview_phone' => '+79' . random_int(100000000, 999999999),
-                    'interview_status' => $statuses[array_rand($statuses)],
-                    'interview_comment' => (random_int(1, 6) === 1) ? 'тестовый коммент' : null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-                if ($hasTime) $row['interview_time'] = $time;
-                $rows[] = $row;
-            } else {
-                $rows[] = [
-                    'interview_date' => $date,
-                    'candidate_name' => 'Кандидат ' . $i,
-                    'candidate_phone' => '+79' . random_int(100000000, 999999999),
-                    'source' => ['avito', 'hh', 'знакомые'][array_rand(['avito', 'hh', 'знакомые'])],
-                    'status' => $statuses[array_rand($statuses)],
-                    'comment' => (random_int(1, 6) === 1) ? 'тестовый коммент' : null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
-        }
-
-        DB::table('interviews')->insert($rows);
+        DB::table('interviews')->insert([
+            'interview_date' => now()->addDays(2)->format('Y-m-d'),
+            'candidate_name' => 'Павел Новиков',
+            'candidate_phone' => '+7 999 555-66-77',
+            'source' => 'hh.ru',
+            'status' => 'planned',
+            'comment' => 'Первичное собеседование',
+            'created_by' => DB::table('users')->value('id'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function seedPromoterSalaries(): void
     {
-        if (!Schema::hasTable('promoter_salaries') || !Schema::hasTable('promoters')) return;
-
-        $promoters = DB::table('promoters')->pluck('promoter_id')->toArray();
-        if (empty($promoters)) return;
-
-        $userId = null;
-        if (Schema::hasTable('users') && Schema::hasColumn('promoter_salaries', 'created_by')) {
-            $userId = DB::table('users')->value('id');
-        }
-
-        $rows = [];
-        foreach ($promoters as $promoterId) {
-            $rows[] = [
-                'promoter_id' => $promoterId,
-                'amount' => random_int(25000, 60000),
-                'salary_period' => Carbon::now()->startOfMonth()->format('Y-m-d'),
-                'created_by' => $userId,
-                'comment' => (random_int(1, 5) === 1) ? 'тестовая ставка' : null,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        DB::table('promoter_salaries')->insert($rows);
+        if (!Schema::hasTable('promoter_salaries')) return;
     }
 
     private function seedSalaryAdjustments(): void
     {
-        if (!Schema::hasTable('salary_adjustments')) return;
-        if (!Schema::hasTable('promoters')) return;
+        if (!Schema::hasTable('salary_adjustments') || !Schema::hasTable('promoters')) return;
 
-        $promoters = DB::table('promoters')->pluck('promoter_id')->toArray();
-        if (empty($promoters)) return;
+        $promoterId = DB::table('promoters')->value('promoter_id');
+        if (!$promoterId) return;
 
-        $today = Carbon::now()->startOfDay();
-        $amountOptions = [200, 300, -150, -200, 500];
-
-        $rows = [];
-        for ($i = 0; $i < 10; $i++) {
-            $amount = $amountOptions[array_rand($amountOptions)];
-            $rows[] = [
-                'promoter_id' => $promoters[array_rand($promoters)],
-                'adj_date' => $today->copy()->subDays(random_int(0, 25))->format('Y-m-d'),
-                'amount' => $amount,
-                'comment' => ($amount < 0) ? 'штраф (тест)' : 'премия (тест)',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ];
-        }
-
-        DB::table('salary_adjustments')->insert($rows);
+        DB::table('salary_adjustments')->insert([
+            'promoter_id' => $promoterId,
+            'adj_date' => now()->subDays(1)->format('Y-m-d'),
+            'amount' => 500,
+            'comment' => 'Премия',
+            'created_by' => DB::table('users')->value('id'),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function seedInstructions(): void
     {
         if (!Schema::hasTable('instructions')) return;
 
-        $creatorId = null;
-        if (Schema::hasTable('users') && Schema::hasColumn('instructions', 'created_by')) {
-            $creatorId = DB::table('users')->value('id');
-        }
-
-        $rows = [
-            [
-                'title' => 'Общие правила',
-                'body' => 'Ведите отчёты ежедневно и обновляйте остатки рекламы.',
-                'created_by' => $creatorId,
-                'is_active' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'title' => 'Работа с промоутерами',
-                'body' => 'Назначайте ответственных и фиксируйте изменения по зарплате промоутеров.',
-                'created_by' => $creatorId,
-                'is_active' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ];
-
-        DB::table('instructions')->insert($rows);
-    }
-
-    private function pickSome(array $arr, int $count): array
-    {
-        $arr = array_values(array_unique($arr));
-        shuffle($arr);
-        return array_slice($arr, 0, max(0, $count));
-    }
-
-    private function fakeRuName(int $i): string
-    {
-        $first = ['Иван','Алексей','Дмитрий','Сергей','Максим','Антон','Артём','Никита','Павел','Егор','Кирилл','Роман'];
-        $last = ['Иванов','Петров','Сидоров','Смирнов','Кузнецов','Попов','Васильев','Морозов','Волков','Соловьёв','Зайцев','Павлов'];
-        return $last[$i % count($last)] . ' ' . $first[$i % count($first)];
+        DB::table('instructions')->insert([
+            'title' => 'Инструкция по раздаче',
+            'body' => 'Проверяйте количество листовок перед выходом.',
+            'created_by' => DB::table('users')->value('id'),
+            'is_active' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function tableColumns(string $table): array
     {
-        try {
-            return Schema::getColumnListing($table);
-        } catch (\Throwable $e) {
-            return [];
-        }
+        return Schema::getColumnListing($table);
     }
 }

@@ -12,6 +12,8 @@ use App\Http\Controllers\InterviewsController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\UsersController;
+use App\Http\Controllers\InstructionsController;
+use App\Http\Controllers\AdResidualsController;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
@@ -135,6 +137,31 @@ Route::middleware('auth')->group(function () {
         ->middleware('module:ad_templates,edit')
         ->name('ad_templates.toggle');
 
+    // AD RESIDUALS
+    Route::get('/ad-residuals', [AdResidualsController::class, 'index'])
+        ->middleware('module:ad_residuals,view')
+        ->name('ad_residuals.index');
+
+    Route::get('/ad-residuals/create', [AdResidualsController::class, 'create'])
+        ->middleware('module:ad_residuals,edit')
+        ->name('ad_residuals.create');
+
+    Route::post('/ad-residuals', [AdResidualsController::class, 'store'])
+        ->middleware('module:ad_residuals,edit')
+        ->name('ad_residuals.store');
+
+    Route::get('/ad-residuals/{adResidual}/edit', [AdResidualsController::class, 'edit'])
+        ->middleware('module:ad_residuals,edit')
+        ->name('ad_residuals.edit');
+
+    Route::put('/ad-residuals/{adResidual}', [AdResidualsController::class, 'update'])
+        ->middleware('module:ad_residuals,edit')
+        ->name('ad_residuals.update');
+
+    Route::delete('/ad-residuals/{adResidual}', [AdResidualsController::class, 'destroy'])
+        ->middleware('module:ad_residuals,edit')
+        ->name('ad_residuals.destroy');
+
     // CARDS
     Route::get('/cards', [ModuleController::class, 'cards'])
         ->middleware('module:cards,view')
@@ -194,6 +221,35 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports', [ReportsController::class, 'index'])
         ->middleware('module:reports,view')
         ->name('reports.index');
+
+    // INSTRUCTIONS
+    Route::get('/instructions', [InstructionsController::class, 'index'])
+        ->middleware('module:instructions,view')
+        ->name('instructions.index');
+
+    Route::get('/instructions/create', [InstructionsController::class, 'create'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.create');
+
+    Route::post('/instructions', [InstructionsController::class, 'store'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.store');
+
+    Route::get('/instructions/{instruction}/edit', [InstructionsController::class, 'edit'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.edit');
+
+    Route::put('/instructions/{instruction}', [InstructionsController::class, 'update'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.update');
+
+    Route::post('/instructions/{instruction}/toggle', [InstructionsController::class, 'toggle'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.toggle');
+
+    Route::delete('/instructions/{instruction}', [InstructionsController::class, 'destroy'])
+        ->middleware('module:instructions,edit')
+        ->name('instructions.destroy');
 
     // USERS (RBAC management)
     Route::get('/users', [UsersController::class, 'index'])
