@@ -262,6 +262,11 @@ class PromotersController extends Controller
             abort(401);
         }
 
+        // Проверяем права на редактирование модуля promoters
+        if (!$accessService->canAccessModule($user, 'promoters', 'edit')) {
+            abort(403, 'Нет прав на редактирование промоутеров');
+        }
+
         if ($accessService->isFullAccess($user)) {
             return;
         }

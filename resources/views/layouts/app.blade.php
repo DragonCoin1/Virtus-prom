@@ -47,7 +47,8 @@
                     $canEditModules[$accessRow->module_code] = (int) $accessRow->can_edit === 1;
                 }
 
-                $canManageUsers = !$accessService->isPromoter($user);
+                // Менеджер не может управлять пользователями
+                $canManageUsers = !$accessService->isPromoter($user) && !$accessService->isManager($user);
             }
         }
     @endphp

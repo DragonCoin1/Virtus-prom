@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Route extends Model
 {
@@ -28,5 +29,10 @@ class Route extends Model
             ->orderByRaw("SUBSTRING_INDEX(route_code, '-', 1) {$direction}")
             ->orderByRaw("CAST(SUBSTRING_INDEX(route_code, '-', -1) AS UNSIGNED) {$direction}")
             ->orderBy('route_code', $direction);
+    }
+
+    public function routeActions(): HasMany
+    {
+        return $this->hasMany(RouteAction::class, 'route_id', 'route_id');
     }
 }

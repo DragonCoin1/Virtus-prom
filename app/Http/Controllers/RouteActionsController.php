@@ -31,9 +31,7 @@ class RouteActionsController extends Controller
 
         $q = RouteAction::query()->with(['promoter', 'route', 'createdBy', 'templates']);
         if ($user) {
-            $q->whereHas('promoter', function (Builder $query) use ($accessService, $user): void {
-                $accessService->scopePromoters($query, $user);
-            });
+            $accessService->scopeRouteActions($q, $user);
         }
 
         $hasFilters = false;

@@ -9,11 +9,51 @@ use Illuminate\Support\Facades\Schema;
 
 class ModuleController extends Controller
 {
-    public function cards(Request $request)
+    public function cards(Request $request, \App\Services\AccessService $accessService)
     {
+        $user = $request->user();
+        
+        // Сначала получаем доступные route_id через route_actions -> promoter -> branch
+        $accessibleRouteIds = null;
+        if ($user && !$accessService->isFullAccess($user)) {
+            $routeIdsQuery = DB::table('route_actions')
+                ->select('route_actions.route_id')
+                ->distinct()
+                ->join('promoters', 'route_actions.promoter_id', '=', 'promoters.promoter_id');
+
+            if ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $routeIdsQuery->join('branches', 'promoters.branch_id', '=', 'branches.branch_id')
+                        ->join('cities', 'branches.city_id', '=', 'cities.city_id')
+                        ->where('cities.region_name', $region);
+                } else {
+                    $accessibleRouteIds = [];
+                }
+            } elseif ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
+                $routeIdsQuery->where('promoters.branch_id', $user->branch_id);
+            } else {
+                $accessibleRouteIds = [];
+            }
+
+            if ($accessibleRouteIds === null) {
+                $accessibleRouteIds = $routeIdsQuery->pluck('route_id')->toArray();
+            }
+        }
+
         $lastActionsSub = DB::table('route_actions')
             ->select('route_id', DB::raw('MAX(action_date) as last_action_date'))
             ->groupBy('route_id');
+
+        // Если есть фильтрация по route_id, применяем её к подзапросу
+        if ($accessibleRouteIds !== null) {
+            if (empty($accessibleRouteIds)) {
+                // Нет доступных маршрутов
+                $lastActionsSub->whereRaw('1=0');
+            } else {
+                $lastActionsSub->whereIn('route_id', $accessibleRouteIds);
+            }
+        }
 
         $q = DB::table('routes as r')
             ->leftJoinSub($lastActionsSub, 'ra', function ($join) {
@@ -27,8 +67,18 @@ class ModuleController extends Controller
                 'r.boxes_count',
                 'r.entrances_count',
                 'ra.last_action_date',
-            ])
-            ->orderByRaw('ra.last_action_date IS NULL DESC')
+            ]);
+
+        // Фильтрация routes по доступу
+        if ($accessibleRouteIds !== null) {
+            if (empty($accessibleRouteIds)) {
+                $q->whereRaw('1=0');
+            } else {
+                $q->whereIn('r.route_id', $accessibleRouteIds);
+            }
+        }
+
+        $q->orderByRaw('ra.last_action_date IS NULL DESC')
             ->orderBy('ra.last_action_date', 'asc');
 
         if (Schema::hasColumn('routes', 'sort_order')) {

@@ -15,6 +15,31 @@ class InterviewsController extends Controller
         $q = Interview::query()->with(['createdBy']);
         $hasInterviewTime = Schema::hasColumn('interviews', 'interview_time');
 
+        // Фильтрация по доступу
+        $user = $request->user();
+        if ($user) {
+            $accessService = app(\App\Services\AccessService::class);
+            // Если пользователь ограничен филиалом, показываем только собеседования созданные пользователями его филиала
+            if ($accessService->isBranchScoped($user) && !empty($user->branch_id)) {
+                $q->whereHas('createdBy', function ($query) use ($user) {
+                    $query->where('branch_id', $user->branch_id);
+                });
+            } elseif ($accessService->isRegionalDirector($user)) {
+                $region = $accessService->regionName($user);
+                if ($region) {
+                    $q->whereHas('createdBy', function ($query) use ($region) {
+                        $query->whereHas('city', function ($q) use ($region) {
+                            $q->where('region_name', $region);
+                        })->orWhereHas('branch.city', function ($q) use ($region) {
+                            $q->where('region_name', $region);
+                        });
+                    });
+                } else {
+                    $q->whereRaw('1=0');
+                }
+            }
+        }
+
         if ($request->filled('date_from')) {
             $q->whereDate('interview_date', '>=', $request->input('date_from'));
         }
@@ -80,11 +105,31 @@ class InterviewsController extends Controller
 
     public function create()
     {
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        $accessService = app(\App\Services\AccessService::class);
+        if (!$accessService->canAccessModule($user, 'interviews', 'edit')) {
+            abort(403, 'Нет прав на создание собеседований');
+        }
+
         return view('interviews.create');
     }
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        $accessService = app(\App\Services\AccessService::class);
+        if (!$accessService->canAccessModule($user, 'interviews', 'edit')) {
+            abort(403, 'Нет прав на создание собеседований');
+        }
+
         $data = $this->validateInterview($request);
         $hasInterviewTime = Schema::hasColumn('interviews', 'interview_time');
 

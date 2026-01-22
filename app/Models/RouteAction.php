@@ -48,6 +48,19 @@ class RouteAction extends Model
         return $this->belongsTo(User::class, 'created_by', 'id');
     }
 
+    public function branch()
+    {
+        return $this->hasOneThrough(
+            Branch::class,
+            Promoter::class,
+            'promoter_id',
+            'branch_id',
+            'promoter_id',
+            'branch_id'
+        );
+    }
+}
+
     public function templates()
     {
         return $this->belongsToMany(

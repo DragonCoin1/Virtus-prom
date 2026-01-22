@@ -345,4 +345,58 @@ class AccessService
 
         return false;
     }
+
+    public function scopeRoutes(Builder $query, User $user): Builder
+    {
+        if ($this->isFullAccess($user)) {
+            return $query;
+        }
+
+        // Фильтруем routes через route_actions -> promoter -> branch
+        if ($this->isRegionalDirector($user)) {
+            $region = $this->regionName($user);
+            if (!$region) {
+                return $query->whereRaw('1=0');
+            }
+
+            return $query->whereHas('routeActions.promoter.branch.city', function (Builder $query) use ($region): void {
+                $query->where('region_name', $region);
+            });
+        }
+
+        if ($this->isBranchScoped($user) && !empty($user->branch_id)) {
+            return $query->whereHas('routeActions.promoter', function (Builder $query) use ($user): void {
+                $query->where('branch_id', $user->branch_id);
+            });
+        }
+
+        return $query->whereRaw('1=0');
+    }
+
+    public function scopeRouteActions(Builder $query, User $user): Builder
+    {
+        if ($this->isFullAccess($user)) {
+            return $query;
+        }
+
+        // Фильтруем route_actions через promoter -> branch
+        if ($this->isRegionalDirector($user)) {
+            $region = $this->regionName($user);
+            if (!$region) {
+                return $query->whereRaw('1=0');
+            }
+
+            return $query->whereHas('promoter.branch.city', function (Builder $query) use ($region): void {
+                $query->where('region_name', $region);
+            });
+        }
+
+        if ($this->isBranchScoped($user) && !empty($user->branch_id)) {
+            return $query->whereHas('promoter', function (Builder $query) use ($user): void {
+                $query->where('branch_id', $user->branch_id);
+            });
+        }
+
+        return $query->whereRaw('1=0');
+    }
 }

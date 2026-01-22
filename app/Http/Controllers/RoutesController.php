@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Route;
+use App\Services\AccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -14,13 +15,22 @@ class RoutesController extends Controller
         return redirect()->route('module.cards');
     }
 
-    public function create()
+    public function create(AccessService $accessService)
     {
+        $user = auth()->user();
+        if (!$user || !$accessService->canAccessModule($user, 'routes', 'edit')) {
+            abort(403, 'Нет прав на создание маршрутов');
+        }
         return view('routes.create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request, AccessService $accessService)
     {
+        $user = auth()->user();
+        if (!$user || !$accessService->canAccessModule($user, 'routes', 'edit')) {
+            abort(403, 'Нет прав на создание маршрутов');
+        }
+
         $data = $this->validateRoute($request);
 
         $payload = [
@@ -68,13 +78,22 @@ class RoutesController extends Controller
         return redirect()->route('module.cards')->with('ok', 'Маршрут обновлён');
     }
 
-    public function importForm()
+    public function importForm(AccessService $accessService)
     {
+        $user = auth()->user();
+        if (!$user || !$accessService->canAccessModule($user, 'routes', 'edit')) {
+            abort(403, 'Нет прав на импорт маршрутов');
+        }
         return view('routes.import');
     }
 
-    public function import(Request $request)
+    public function import(Request $request, AccessService $accessService)
     {
+        $user = auth()->user();
+        if (!$user || !$accessService->canAccessModule($user, 'routes', 'edit')) {
+            abort(403, 'Нет прав на импорт маршрутов');
+        }
+
         $request->validate([
             'file' => ['required', 'file', 'mimes:csv,json,txt'],
             'file_type' => ['required', 'in:csv,json'],
