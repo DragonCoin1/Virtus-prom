@@ -61,7 +61,7 @@ class RoleModuleAccessSeeder extends Seeder
                     'role_id' => $roles['promoter'],
                     'module_code' => $m,
                     'can_view' => 1,
-                    'can_edit' => 0,
+                    'can_edit' => $m === 'salary' ? 1 : 0,
                 ]);
             }
         }

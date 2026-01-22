@@ -141,6 +141,7 @@ class SalaryController extends Controller
 
     public function createAdjustment(AccessService $accessService)
     {
+        $this->assertSalaryEditAccess($accessService);
         $promotersQuery = Promoter::orderBy('promoter_full_name');
         $user = auth()->user();
         if ($user) {
@@ -152,6 +153,7 @@ class SalaryController extends Controller
 
     public function storeAdjustment(Request $request, AccessService $accessService)
     {
+        $this->assertSalaryEditAccess($accessService);
         $data = $request->validate([
             'promoter_id' => ['required', 'integer', 'exists:promoters,promoter_id'],
             'adj_date' => ['required', 'date'],
@@ -177,6 +179,7 @@ class SalaryController extends Controller
 
     public function editAdjustment(SalaryAdjustment $salaryAdjustment, AccessService $accessService)
     {
+        $this->assertSalaryEditAccess($accessService);
         $salaryAdjustment->load('promoter');
         $user = auth()->user();
         if ($user && !$accessService->canAccessPromoter($user, $salaryAdjustment->promoter)) {
@@ -194,6 +197,7 @@ class SalaryController extends Controller
 
     public function updateAdjustment(Request $request, SalaryAdjustment $salaryAdjustment, AccessService $accessService)
     {
+        $this->assertSalaryEditAccess($accessService);
         $data = $request->validate([
             'promoter_id' => ['required', 'integer', 'exists:promoters,promoter_id'],
             'adj_date' => ['required', 'date'],
@@ -218,6 +222,7 @@ class SalaryController extends Controller
 
     public function destroyAdjustment(SalaryAdjustment $salaryAdjustment, AccessService $accessService)
     {
+        $this->assertSalaryEditAccess($accessService);
         $salaryAdjustment->load('promoter');
         $user = auth()->user();
         if ($user && !$accessService->canAccessPromoter($user, $salaryAdjustment->promoter)) {
@@ -226,5 +231,17 @@ class SalaryController extends Controller
 
         $salaryAdjustment->delete();
         return redirect()->route('salary.index')->with('ok', 'Корректировка удалена');
+    }
+
+    private function assertSalaryEditAccess(AccessService $accessService): void
+    {
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        if (!$accessService->canEditSalary($user)) {
+            abort(403, 'Менеджеру запрещено редактировать зарплату');
+        }
     }
 }

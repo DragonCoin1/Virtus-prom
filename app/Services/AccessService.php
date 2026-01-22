@@ -16,15 +16,20 @@ class AccessService
 
     public function roleName(User $user): ?string
     {
-        if (array_key_exists($user->role_id, $this->roleCache)) {
-            return $this->roleCache[$user->role_id];
+        return $this->roleNameById((int) $user->role_id);
+    }
+
+    public function roleNameById(int $roleId): ?string
+    {
+        if (array_key_exists($roleId, $this->roleCache)) {
+            return $this->roleCache[$roleId];
         }
 
         $name = DB::table('roles')
-            ->where('role_id', $user->role_id)
+            ->where('role_id', $roleId)
             ->value('role_name');
 
-        $this->roleCache[$user->role_id] = $name;
+        $this->roleCache[$roleId] = $name;
 
         return $name;
     }
@@ -96,6 +101,11 @@ class AccessService
         return $region;
     }
 
+    public function canEditSalary(User $user): bool
+    {
+        return $this->roleName($user) !== 'manager';
+    }
+
     public function canAccessBranch(User $user, ?int $branchId): bool
     {
         if ($this->isFullAccess($user)) {
@@ -163,6 +173,54 @@ class AccessService
         }
 
         return $query->whereRaw('1=0');
+    }
+
+    public function scopeUsers(Builder $query, User $user): Builder
+    {
+        if ($this->isFullAccess($user)) {
+            return $query;
+        }
+
+        if ($this->isRegionalDirector($user)) {
+            $region = $this->regionName($user);
+            if (!$region) {
+                return $query->whereRaw('1=0');
+            }
+
+            return $query->where(function (Builder $query) use ($region): void {
+                $query->whereHas('city', function (Builder $query) use ($region): void {
+                    $query->where('region_name', $region);
+                })->orWhereHas('branch.city', function (Builder $query) use ($region): void {
+                    $query->where('region_name', $region);
+                });
+            });
+        }
+
+        if ($this->isBranchScoped($user) && !empty($user->branch_id)) {
+            return $query->where('branch_id', $user->branch_id);
+        }
+
+        return $query->whereRaw('1=0');
+    }
+
+    public function canAccessUser(User $user, User $target): bool
+    {
+        if ($this->isFullAccess($user)) {
+            return true;
+        }
+
+        if ($this->isRegionalDirector($user)) {
+            $region = $this->regionName($user);
+            $targetRegion = $this->regionName($target);
+
+            return !empty($region) && !empty($targetRegion) && $region === $targetRegion;
+        }
+
+        if ($this->isBranchScoped($user) && !empty($user->branch_id)) {
+            return (int) $user->branch_id === (int) $target->branch_id;
+        }
+
+        return false;
     }
 
     public function canAccessModule(User $user, string $module, string $permission = 'view'): bool
