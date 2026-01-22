@@ -97,6 +97,10 @@
                     <a class="vp-nav-link {{ request()->routeIs('instructions.*') ? 'active' : '' }}" href="{{ route('instructions.index') }}">Инструкции</a>
                 @endif --}}
 
+                @if($canManageUsers || (auth()->check() && app(AccessService::class)->isDeveloper(auth()->user())))
+                    <a class="vp-nav-link {{ request()->routeIs('cities.*') ? 'active' : '' }}" href="{{ route('cities.index') }}">Города</a>
+                @endif
+
                 @if($canManageUsers)
                     <a class="vp-nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">Пользователи</a>
                 @endif
