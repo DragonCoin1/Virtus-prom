@@ -6,8 +6,20 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4">Остатки рекламы</h1>
-        @if(!empty($canEditModules['ad_residuals']))
-            <a href="{{ route('ad_residuals.create') }}" class="btn btn-primary">Добавить</a>
+        @php
+            // Для developer всегда показываем кнопку
+            $canAddResidual = false;
+            if (auth()->check()) {
+                $accessService = app(\App\Services\AccessService::class);
+                if ($accessService->isDeveloper(auth()->user())) {
+                    $canAddResidual = true;
+                } elseif (!empty($canEditModules['ad_residuals'])) {
+                    $canAddResidual = true;
+                }
+            }
+        @endphp
+        @if($canAddResidual)
+            <a href="{{ route('ad_residuals.create') }}" class="btn btn-primary">+ Внести приход рекламы</a>
         @endif
     </div>
 
@@ -73,7 +85,7 @@
                     <td>{{ $residual->received_at?->format('d.m.Y') }}</td>
                     <td>{{ $residual->notes ?? '—' }}</td>
                     <td class="text-end">
-                        @if(!empty($canEditModules['ad_residuals']))
+                        @if($canAddResidual)
                             <a class="btn btn-sm btn-outline-secondary" href="{{ route('ad_residuals.edit', $residual) }}">Изменить</a>
                             <form method="POST" action="{{ route('ad_residuals.destroy', $residual) }}" class="d-inline">
                                 @csrf
