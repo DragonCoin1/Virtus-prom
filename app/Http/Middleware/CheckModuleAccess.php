@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\AccessService;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckModuleAccess
@@ -17,21 +17,11 @@ class CheckModuleAccess
             abort(401);
         }
 
-        $access = DB::table('role_module_access')
-            ->where('role_id', $user->role_id)
-            ->where('module_code', $module)
-            ->first();
+        $accessService = app(AccessService::class);
+        $permission = $permission === 'delete' ? 'edit' : $permission;
 
-        if (!$access) {
-            abort(403, 'Нет доступа к разделу');
-        }
-
-        if ($permission === 'edit' && (int)$access->can_edit !== 1) {
-            abort(403, 'Нет права редактирования');
-        }
-
-        if ($permission === 'view' && (int)$access->can_view !== 1) {
-            abort(403, 'Нет права просмотра');
+        if (!$accessService->canAccessModule($user, $module, $permission)) {
+            abort(403, $permission === 'view' ? 'Нет права просмотра' : 'Нет права редактирования');
         }
 
         return $next($request);
