@@ -77,13 +77,30 @@ class FullTestSeeder extends Seeder
             if (in_array('module_code', $cols, true)) $moduleField = 'module_code';
             elseif (in_array('module_key', $cols, true)) $moduleField = 'module_key';
 
-            $modules = ['promoters','route_actions','cards','interviews','salary','reports','routes','ad_templates','keys_registry'];
+            $modules = [
+                'promoters',
+                'route_actions',
+                'cards',
+                'interviews',
+                'salary',
+                'reports',
+                'routes',
+                'ad_templates',
+                'ad_residuals',
+                'instructions',
+                'keys_registry',
+            ];
 
             $rows = [];
             if ($moduleField) {
                 $fullAccessRoles = [
                     $roleIds['developer'],
                     $roleIds['general_director'],
+                    $roleIds['regional_director'],
+                    $roleIds['branch_director'],
+                ];
+
+                $instructionRestricted = [
                     $roleIds['regional_director'],
                     $roleIds['branch_director'],
                 ];
@@ -95,10 +112,12 @@ class FullTestSeeder extends Seeder
                         if (in_array('role_id', $cols, true)) $row['role_id'] = $rid;
                         $row[$moduleField] = $m;
 
-                        if (in_array('can_view', $cols, true)) $row['can_view'] = 1;
-                        if (in_array('can_add', $cols, true)) $row['can_add'] = 1;
-                        if (in_array('can_edit', $cols, true)) $row['can_edit'] = 1;
-                        if (in_array('can_delete', $cols, true)) $row['can_delete'] = 1;
+                        $instructionOnly = $m === 'instructions' && in_array($rid, $instructionRestricted, true);
+
+                        if (in_array('can_view', $cols, true)) $row['can_view'] = $instructionOnly ? 0 : 1;
+                        if (in_array('can_add', $cols, true)) $row['can_add'] = $instructionOnly ? 0 : 1;
+                        if (in_array('can_edit', $cols, true)) $row['can_edit'] = $instructionOnly ? 0 : 1;
+                        if (in_array('can_delete', $cols, true)) $row['can_delete'] = $instructionOnly ? 0 : 1;
 
                         if (in_array('created_at', $cols, true)) $row['created_at'] = now();
                         if (in_array('updated_at', $cols, true)) $row['updated_at'] = now();
@@ -113,9 +132,13 @@ class FullTestSeeder extends Seeder
                     if (in_array('role_id', $cols, true)) $row['role_id'] = $roleIds['manager'];
                     $row[$moduleField] = $m;
 
-                    if (in_array('can_view', $cols, true)) $row['can_view'] = 1;
+                    if (in_array('can_view', $cols, true)) {
+                        $row['can_view'] = in_array($m, ['ad_templates', 'ad_residuals', 'instructions'], true) ? 0 : 1;
+                    }
                     if (in_array('can_add', $cols, true)) $row['can_add'] = 1;
-                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = $m === 'salary' ? 0 : 1;
+                    if (in_array('can_edit', $cols, true)) {
+                        $row['can_edit'] = in_array($m, ['salary', 'ad_templates', 'ad_residuals', 'instructions'], true) ? 0 : 1;
+                    }
                     if (in_array('can_delete', $cols, true)) $row['can_delete'] = 1;
 
                     if (in_array('created_at', $cols, true)) $row['created_at'] = now();
@@ -132,7 +155,7 @@ class FullTestSeeder extends Seeder
 
                     if (in_array('can_view', $cols, true)) $row['can_view'] = 1;
                     if (in_array('can_add', $cols, true)) $row['can_add'] = 0;
-                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = 0;
+                    if (in_array('can_edit', $cols, true)) $row['can_edit'] = $m === 'salary' ? 1 : 0;
                     if (in_array('can_delete', $cols, true)) $row['can_delete'] = 0;
 
                     if (in_array('created_at', $cols, true)) $row['created_at'] = now();
