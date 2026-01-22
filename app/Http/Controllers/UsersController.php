@@ -39,13 +39,24 @@ class UsersController extends Controller
         $user = $request->user();
         $roles = $this->rolesList();
         
-        // Разработчик и генеральный директор видят все города и филиалы
+        // Разработчик видит ВСЕ города (из ТЗ: супер аккаунт)
+        // Генеральный директор тоже видит все города
         $citiesQuery = City::query();
         $branchesQuery = Branch::query();
         
-        if ($user && !$accessService->isFullAccess($user)) {
-            $accessService->scopeBranches($branchesQuery, $user);
-            // Для городов используем те, что связаны с доступными филиалами
+        if ($user && $accessService->isDeveloper($user)) {
+            // Разработчик - все города и филиалы
+            $cities = $citiesQuery->orderBy('city_name')->get();
+            $branches = $branchesQuery->orderBy('branch_name')->get();
+        } elseif ($user && $accessService->isFullAccess($user)) {
+            // Генеральный директор - все города и филиалы
+            $cities = $citiesQuery->orderBy('city_name')->get();
+            $branches = $branchesQuery->orderBy('branch_name')->get();
+        } else {
+            // Остальные - только доступные филиалы и связанные города
+            if ($user) {
+                $accessService->scopeBranches($branchesQuery, $user);
+            }
             $accessibleBranches = $branchesQuery->get();
             $accessibleCityIds = $accessibleBranches->pluck('city_id')->unique()->filter();
             if ($accessibleCityIds->isNotEmpty()) {
@@ -53,10 +64,9 @@ class UsersController extends Controller
             } else {
                 $citiesQuery->whereRaw('1=0');
             }
+            $cities = $citiesQuery->orderBy('city_name')->get();
+            $branches = $branchesQuery->orderBy('branch_name')->get();
         }
-        
-        $cities = $citiesQuery->orderBy('city_name')->get();
-        $branches = $branchesQuery->orderBy('branch_name')->get();
 
         return view('users.create', compact('roles', 'cities', 'branches', 'user'));
     }
@@ -102,13 +112,24 @@ class UsersController extends Controller
 
         $roles = $this->rolesList();
         
-        // Разработчик и генеральный директор видят все города и филиалы
+        // Разработчик видит ВСЕ города (из ТЗ: супер аккаунт)
+        // Генеральный директор тоже видит все города
         $citiesQuery = City::query();
         $branchesQuery = Branch::query();
         
-        if ($actor && !$accessService->isFullAccess($actor)) {
-            $accessService->scopeBranches($branchesQuery, $actor);
-            // Для городов используем те, что связаны с доступными филиалами
+        if ($actor && $accessService->isDeveloper($actor)) {
+            // Разработчик - все города и филиалы
+            $cities = $citiesQuery->orderBy('city_name')->get();
+            $branches = $branchesQuery->orderBy('branch_name')->get();
+        } elseif ($actor && $accessService->isFullAccess($actor)) {
+            // Генеральный директор - все города и филиалы
+            $cities = $citiesQuery->orderBy('city_name')->get();
+            $branches = $branchesQuery->orderBy('branch_name')->get();
+        } else {
+            // Остальные - только доступные филиалы и связанные города
+            if ($actor) {
+                $accessService->scopeBranches($branchesQuery, $actor);
+            }
             $accessibleBranches = $branchesQuery->get();
             $accessibleCityIds = $accessibleBranches->pluck('city_id')->unique()->filter();
             if ($accessibleCityIds->isNotEmpty()) {
@@ -116,10 +137,9 @@ class UsersController extends Controller
             } else {
                 $citiesQuery->whereRaw('1=0');
             }
+            $cities = $citiesQuery->orderBy('city_name')->get();
+            $branches = $branchesQuery->orderBy('branch_name')->get();
         }
-        
-        $cities = $citiesQuery->orderBy('city_name')->get();
-        $branches = $branchesQuery->orderBy('branch_name')->get();
 
         return view('users.edit', compact('user', 'roles', 'cities', 'branches'));
     }
