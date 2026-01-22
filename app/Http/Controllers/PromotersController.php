@@ -3,15 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Promoter;
+use App\Services\AccessService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class PromotersController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, AccessService $accessService)
     {
         $q = Promoter::query();
+        $user = $request->user();
+        if ($user) {
+            $accessService->scopePromoters($q, $user);
+        }
 
         // Поиск (ФИО + телефон)
         $search = $request->input('search', $request->input('q'));
@@ -42,21 +47,25 @@ class PromotersController extends Controller
         return view('promoters.index', compact('promoters'));
     }
 
-    public function create()
+    public function create(AccessService $accessService)
     {
+        $this->assertPromoterWriteAccess($accessService);
         return view('promoters.create');
     }
 
-    public function importForm()
+    public function importForm(AccessService $accessService)
     {
+        $this->assertPromoterWriteAccess($accessService);
         return view('promoters.import');
     }
 
-    public function import(Request $request)
+    public function import(Request $request, AccessService $accessService)
     {
         $request->validate([
             'csv_file' => ['required', 'file'],
         ]);
+
+        $this->assertPromoterWriteAccess($accessService);
 
         $branchId = null;
         if (Schema::hasColumn('promoters', 'branch_id') && auth()->check()) {
@@ -153,8 +162,9 @@ class PromotersController extends Controller
         return back()->with('ok', 'Импортировано: ' . $imported);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, AccessService $accessService)
     {
+        $this->assertPromoterWriteAccess($accessService);
         $data = $this->validatePromoter($request);
         $columns = Schema::getColumnListing('promoters');
         $branchId = null;
@@ -192,13 +202,15 @@ class PromotersController extends Controller
         return redirect()->route('module.promoters')->with('ok', 'Промоутер добавлен');
     }
 
-    public function edit(Promoter $promoter)
+    public function edit(Promoter $promoter, AccessService $accessService)
     {
+        $this->assertPromoterAccess($accessService, $promoter);
         return view('promoters.edit', compact('promoter'));
     }
 
-    public function update(Request $request, Promoter $promoter)
+    public function update(Request $request, Promoter $promoter, AccessService $accessService)
     {
+        $this->assertPromoterAccess($accessService, $promoter);
         $data = $this->validatePromoter($request);
         $columns = Schema::getColumnListing('promoters');
 
@@ -228,10 +240,35 @@ class PromotersController extends Controller
         return redirect()->route('module.promoters')->with('ok', 'Промоутер обновлён');
     }
 
-    public function destroy(Promoter $promoter)
+    public function destroy(Promoter $promoter, AccessService $accessService)
     {
+        $this->assertPromoterAccess($accessService, $promoter);
         $promoter->delete();
         return redirect()->route('module.promoters')->with('ok', 'Промоутер удалён');
+    }
+
+    private function assertPromoterAccess(AccessService $accessService, Promoter $promoter): void
+    {
+        $user = auth()->user();
+        if (!$user || !$accessService->canAccessPromoter($user, $promoter)) {
+            abort(403, 'Нет доступа к промоутеру');
+        }
+    }
+
+    private function assertPromoterWriteAccess(AccessService $accessService): void
+    {
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        if ($accessService->isFullAccess($user)) {
+            return;
+        }
+
+        if (empty($user->branch_id)) {
+            abort(403, 'Не указан филиал для записи');
+        }
     }
 
     private function validatePromoter(Request $request): array

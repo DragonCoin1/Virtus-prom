@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'module' => \App\Http\Middleware\CheckModuleAccess::class,
+            'user.manage' => \App\Http\Middleware\CheckUserManagementAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

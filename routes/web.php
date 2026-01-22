@@ -11,6 +11,7 @@ use App\Http\Controllers\AdTemplatesController;
 use App\Http\Controllers\InterviewsController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\UsersController;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
@@ -145,18 +146,23 @@ Route::middleware('auth')->group(function () {
         ->name('interviews.index');
 
     Route::get('/interviews/create', [InterviewsController::class, 'create'])
+        ->middleware('module:interviews,edit')
         ->name('interviews.create');
 
     Route::post('/interviews', [InterviewsController::class, 'store'])
+        ->middleware('module:interviews,edit')
         ->name('interviews.store');
 
     Route::get('/interviews/{interview}/edit', [InterviewsController::class, 'edit'])
+        ->middleware('module:interviews,edit')
         ->name('interviews.edit');
 
     Route::put('/interviews/{interview}', [InterviewsController::class, 'update'])
+        ->middleware('module:interviews,edit')
         ->name('interviews.update');
 
     Route::delete('/interviews/{interview}', [InterviewsController::class, 'destroy'])
+        ->middleware('module:interviews,edit')
         ->name('interviews.destroy');
 
     // SALARY
@@ -188,4 +194,29 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports', [ReportsController::class, 'index'])
         ->middleware('module:reports,view')
         ->name('reports.index');
+
+    // USERS (RBAC management)
+    Route::get('/users', [UsersController::class, 'index'])
+        ->middleware('user.manage')
+        ->name('users.index');
+
+    Route::get('/users/create', [UsersController::class, 'create'])
+        ->middleware('user.manage')
+        ->name('users.create');
+
+    Route::post('/users', [UsersController::class, 'store'])
+        ->middleware('user.manage')
+        ->name('users.store');
+
+    Route::get('/users/{user}/edit', [UsersController::class, 'edit'])
+        ->middleware('user.manage')
+        ->name('users.edit');
+
+    Route::put('/users/{user}', [UsersController::class, 'update'])
+        ->middleware('user.manage')
+        ->name('users.update');
+
+    Route::delete('/users/{user}', [UsersController::class, 'destroy'])
+        ->middleware('user.manage')
+        ->name('users.destroy');
 });
