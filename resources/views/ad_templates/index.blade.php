@@ -4,7 +4,18 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="m-0">Макеты</h3>
-    @if(!empty($canEditModules['ad_templates']))
+    @php
+        $canManageTemplates = false;
+        if (auth()->check()) {
+            $accessService = app(\App\Services\AccessService::class);
+            if ($accessService->isDeveloper(auth()->user())) {
+                $canManageTemplates = true;
+            } elseif (!empty($canEditModules['ad_templates'])) {
+                $canManageTemplates = true;
+            }
+        }
+    @endphp
+    @if($canManageTemplates)
         <a class="btn btn-primary btn-sm" href="{{ route('ad_templates.create') }}">+ Добавить</a>
     @endif
 </div>
@@ -80,7 +91,7 @@
                         @endif
                     </td>
                     <td class="text-end">
-                        @if(!empty($canEditModules['ad_templates']))
+                        @if($canManageTemplates)
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
                                         type="button" data-bs-toggle="dropdown" aria-expanded="false">

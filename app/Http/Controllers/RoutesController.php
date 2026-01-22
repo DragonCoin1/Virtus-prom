@@ -76,76 +76,109 @@ class RoutesController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'csv_file' => ['required', 'file'],
+            'file' => ['required', 'file', 'mimes:csv,json,txt'],
+            'file_type' => ['required', 'in:csv,json'],
         ]);
 
-        $file = $request->file('csv_file');
-        $handle = fopen($file->getRealPath(), 'r');
-        if ($handle === false) {
-            return back()->withErrors(['csv_file' => 'Не удалось открыть файл']);
-        }
-
-        $header = fgetcsv($handle, 0, ';');
-        if (!$header) {
-            fclose($handle);
-            return back()->withErrors(['csv_file' => 'CSV файл пустой']);
-        }
-
-        $header = array_map(fn($h) => trim((string) $h), $header);
-        $map = array_flip($header);
-
-        if (!isset($map['route_code'])) {
-            fclose($handle);
-            return back()->withErrors(['csv_file' => 'Не найдена колонка route_code']);
-        }
-
+        $file = $request->file('file');
+        $fileType = $request->input('file_type');
         $columns = Schema::getColumnListing('routes');
         $imported = 0;
         $sortOrder = 1;
 
-        DB::transaction(function () use ($handle, $columns, $map, &$imported, &$sortOrder) {
+        DB::transaction(function () use ($file, $fileType, $columns, &$imported, &$sortOrder) {
             $this->clearRoutesData();
 
-            while (($row = fgetcsv($handle, 0, ';')) !== false) {
-                if (count($row) === 1 && trim((string) $row[0]) === '') {
-                    continue;
+            if ($fileType === 'csv') {
+                $handle = fopen($file->getRealPath(), 'r');
+                if ($handle === false) {
+                    throw new \Exception('Не удалось открыть файл');
                 }
 
-                $row = array_map(fn($v) => trim((string) $v), $row);
-
-                $code = $row[$map['route_code']] ?? '';
-                if ($code === '') {
-                    continue;
+                $header = fgetcsv($handle, 0, ';');
+                if (!$header) {
+                    fclose($handle);
+                    throw new \Exception('CSV файл пустой');
                 }
 
-                $district = $map['route_district'] ?? null;
-                $type = $map['route_type'] ?? null;
-                $boxes = $map['boxes_count'] ?? null;
-                $entrances = $map['entrances_count'] ?? null;
-                $active = $map['is_active'] ?? null;
-                $comment = $map['route_comment'] ?? null;
+                $header = array_map(fn($h) => trim((string) $h), $header);
+                $map = array_flip($header);
 
-                $payload = [
-                    'route_code' => $code,
-                    'route_district' => $district !== null ? ($row[$district] ?? null) : null,
-                    'route_type' => $this->normalizeRouteType($type !== null ? ($row[$type] ?? null) : null),
-                    'boxes_count' => $boxes !== null ? $this->normalizeInteger($row[$boxes] ?? null) : 0,
-                    'entrances_count' => $entrances !== null ? $this->normalizeInteger($row[$entrances] ?? null) : 0,
-                    'is_active' => $active !== null ? $this->normalizeBoolean($row[$active] ?? null) : 1,
-                    'route_comment' => $comment !== null ? ($row[$comment] ?? null) : null,
-                    'sort_order' => $sortOrder,
-                ];
+                if (!isset($map['route_code'])) {
+                    fclose($handle);
+                    throw new \Exception('Не найдена колонка route_code');
+                }
 
-                $payload = array_intersect_key($payload, array_flip($columns));
+                while (($row = fgetcsv($handle, 0, ';')) !== false) {
+                    if (count($row) === 1 && trim((string) $row[0]) === '') {
+                        continue;
+                    }
 
-                Route::create($payload);
+                    $row = array_map(fn($v) => trim((string) $v), $row);
 
-                $imported++;
-                $sortOrder++;
+                    $code = $row[$map['route_code']] ?? '';
+                    if ($code === '') {
+                        continue;
+                    }
+
+                    $district = $map['route_district'] ?? null;
+                    $type = $map['route_type'] ?? null;
+                    $boxes = $map['boxes_count'] ?? null;
+                    $entrances = $map['entrances_count'] ?? null;
+                    $active = $map['is_active'] ?? null;
+                    $comment = $map['route_comment'] ?? null;
+
+                    $payload = [
+                        'route_code' => $code,
+                        'route_district' => $district !== null ? ($row[$district] ?? null) : null,
+                        'route_type' => $this->normalizeRouteType($type !== null ? ($row[$type] ?? null) : null),
+                        'boxes_count' => $boxes !== null ? $this->normalizeInteger($row[$boxes] ?? null) : 0,
+                        'entrances_count' => $entrances !== null ? $this->normalizeInteger($row[$entrances] ?? null) : 0,
+                        'is_active' => $active !== null ? $this->normalizeBoolean($row[$active] ?? null) : 1,
+                        'route_comment' => $comment !== null ? ($row[$comment] ?? null) : null,
+                        'sort_order' => $sortOrder,
+                    ];
+
+                    $payload = array_intersect_key($payload, array_flip($columns));
+                    Route::create($payload);
+
+                    $imported++;
+                    $sortOrder++;
+                }
+
+                fclose($handle);
+            } elseif ($fileType === 'json') {
+                $jsonContent = file_get_contents($file->getRealPath());
+                $data = json_decode($jsonContent, true);
+
+                if (!is_array($data)) {
+                    throw new \Exception('JSON файл некорректный. Ожидается массив объектов.');
+                }
+
+                foreach ($data as $item) {
+                    if (!is_array($item) || empty($item['route_code'])) {
+                        continue;
+                    }
+
+                    $payload = [
+                        'route_code' => trim((string) $item['route_code']),
+                        'route_district' => isset($item['route_district']) ? trim((string) $item['route_district']) : null,
+                        'route_type' => $this->normalizeRouteType($item['route_type'] ?? null),
+                        'boxes_count' => $this->normalizeInteger($item['boxes_count'] ?? null),
+                        'entrances_count' => $this->normalizeInteger($item['entrances_count'] ?? null),
+                        'is_active' => $this->normalizeBoolean($item['is_active'] ?? null),
+                        'route_comment' => isset($item['route_comment']) ? trim((string) $item['route_comment']) : null,
+                        'sort_order' => $sortOrder,
+                    ];
+
+                    $payload = array_intersect_key($payload, array_flip($columns));
+                    Route::create($payload);
+
+                    $imported++;
+                    $sortOrder++;
+                }
             }
         });
-
-        fclose($handle);
 
         return back()->with('ok', 'Импортировано: ' . $imported);
     }

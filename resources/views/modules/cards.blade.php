@@ -13,11 +13,26 @@
 <div class="vp-toolbar mb-3">
     <h3 class="mb-0">Карты</h3>
     <div class="vp-toolbar-actions">
-        @if(!empty($canEditModules['routes']))
+        @php
+            // Для developer всегда показываем кнопки
+            $canManageRoutes = false;
+            $canViewTemplates = false;
+            if (auth()->check()) {
+                $accessService = app(\App\Services\AccessService::class);
+                if ($accessService->isDeveloper(auth()->user())) {
+                    $canManageRoutes = true;
+                    $canViewTemplates = true;
+                } else {
+                    $canManageRoutes = !empty($canEditModules['routes']);
+                    $canViewTemplates = !empty($canViewModules['ad_templates']);
+                }
+            }
+        @endphp
+        @if($canManageRoutes)
             <a href="{{ route('routes.create') }}" class="btn btn-sm btn-outline-primary vp-btn">+ Маршрут</a>
             <a href="{{ route('routes.import.form') }}" class="btn btn-sm btn-primary vp-btn">Импорт</a>
         @endif
-        @if(!empty($canViewModules['ad_templates']))
+        @if($canViewTemplates)
             <a class="btn btn-outline-primary btn-sm vp-btn" href="{{ route('ad_templates.index') }}">Макеты</a>
         @endif
     </div>
@@ -72,7 +87,7 @@
                                     ⋮
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end">
-                                    @if(!empty($canEditModules['routes']))
+                                    @if($canManageRoutes)
                                         <li>
                                             <a class="dropdown-item" href="{{ route('routes.edit', $r->route_id) }}">
                                                 Редактировать
