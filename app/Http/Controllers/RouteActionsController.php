@@ -29,7 +29,7 @@ class RouteActionsController extends Controller
         }
         $routes = $routesQuery->orderByCodeNatural()->get();
 
-        $q = RouteAction::query()->with(['promoter', 'route', 'createdBy', 'templates']);
+        $q = RouteAction::query()->with(['promoter.branch.city', 'route.city', 'createdBy', 'templates']);
         if ($user) {
             $accessService->scopeRouteActions($q, $user);
         }
@@ -102,17 +102,9 @@ class RouteActionsController extends Controller
         }
 
         // Получаем доступные города для фильтра
-        $cities = collect();
-        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
-            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
-                $cities = \App\Models\City::orderBy('city_name')->get();
-            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
-                $cityIds = $accessService->getDirectorCityIds($user);
-                if (!empty($cityIds)) {
-                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
-                }
-            }
-        }
+        $cities = $user && $accessService->canUseCityFilter($user)
+            ? $accessService->accessibleCitiesForFilter($user)
+            : collect();
 
         return view('route_actions.index', compact(
             'actions',

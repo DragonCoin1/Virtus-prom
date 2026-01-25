@@ -3,7 +3,6 @@
 @section('title', 'Редактировать остатки')
 
 @section('content')
-<div class="container">
     <h1 class="h4 mb-3">Редактировать остатки</h1>
 
     @if($errors->any())
@@ -60,5 +59,4 @@
             <a class="btn btn-outline-secondary" href="{{ route('ad_residuals.index') }}">Назад</a>
         </div>
     </form>
-</div>
 @endsection

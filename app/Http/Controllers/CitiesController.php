@@ -95,7 +95,8 @@ class CitiesController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt,json'],
+            // max is in kilobytes: 50MB = 51200KB
+            'file' => ['required', 'file', 'mimes:csv,txt,json', 'max:51200'],
         ]);
 
         $file = $request->file('file');

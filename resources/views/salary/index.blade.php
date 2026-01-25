@@ -100,6 +100,7 @@
             <tr>
                 <th style="width: 160px;">Период</th>
                 <th>Промоутер</th>
+                <th>Город</th>
                 <th style="width: 160px;">По разноске</th>
                 <th style="width: 160px;">Корректировки</th>
                 <th style="width: 160px;">Итого</th>
@@ -110,6 +111,7 @@
                 <tr>
                     <td class="text-muted">{{ $periodLabel }}</td>
                     <td class="fw-semibold">{{ $r['promoter_name'] }}</td>
+                    <td>{{ $r['city_name'] ?? '—' }}</td>
                     <td>{{ $r['sum_payment'] }}</td>
                     <td>{{ $r['sum_adj'] }}</td>
                     <td class="fw-semibold">{{ $r['sum_final'] }}</td>
@@ -117,7 +119,7 @@
             @endforeach
 
             @if(count($rows) === 0)
-                <tr><td colspan="5" class="text-center text-muted p-4">Нет данных за выбранный период</td></tr>
+                <tr><td colspan="6" class="text-center text-muted p-4">Нет данных за выбранный период</td></tr>
             @endif
             </tbody>
 
@@ -126,6 +128,7 @@
                 <tr>
                     <th class="text-muted">{{ $periodLabel }}</th>
                     <th>Итого</th>
+                    <th></th>
                     <th>{{ $totalPayment }}</th>
                     <th>{{ $totalAdj }}</th>
                     <th>{{ $totalFinal }}</th>
@@ -147,6 +150,7 @@
             <tr>
                 <th style="width: 140px;">Дата</th>
                 <th>Промоутер</th>
+                <th>Город</th>
                 <th style="width: 140px;">Сумма</th>
                 <th>Комментарий</th>
                 <th style="width: 160px;">Внёс</th>
@@ -158,6 +162,7 @@
                 <tr>
                     <td>{{ $a->adj_date }}</td>
                     <td>{{ $a->promoter?->promoter_full_name ?? ('ID ' . $a->promoter_id) }}</td>
+                    <td>{{ $a->city?->city_name ?? ($a->promoter?->branch?->city?->city_name ?? '—') }}</td>
                     <td class="{{ (int)$a->amount < 0 ? 'text-danger' : 'text-success' }}">
                         {{ $a->amount }}
                     </td>

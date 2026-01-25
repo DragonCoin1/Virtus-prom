@@ -13,7 +13,7 @@ class InterviewsController extends Controller
     public function index(Request $request, AccessService $accessService)
     {
         $today = Carbon::today()->toDateString();
-        $q = Interview::query()->with(['createdBy']);
+        $q = Interview::query()->with(['city', 'createdBy']);
         $hasInterviewTime = Schema::hasColumn('interviews', 'interview_time');
 
         // Фильтрация по доступу
@@ -139,17 +139,9 @@ class InterviewsController extends Controller
             ->appends($request->query());
 
         // Получаем доступные города для фильтра
-        $cities = collect();
-        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
-            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
-                $cities = \App\Models\City::orderBy('city_name')->get();
-            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
-                $cityIds = $accessService->getDirectorCityIds($user);
-                if (!empty($cityIds)) {
-                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
-                }
-            }
-        }
+        $cities = $user && $accessService->canUseCityFilter($user)
+            ? $accessService->accessibleCitiesForFilter($user)
+            : collect();
 
         return view('interviews.index', compact('interviews', 'cities', 'user'));
     }

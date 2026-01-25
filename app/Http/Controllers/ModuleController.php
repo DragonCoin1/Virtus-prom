@@ -94,17 +94,9 @@ class ModuleController extends Controller
         $routes = $q->paginate(80)->withQueryString();
 
         // Получаем доступные города для фильтра
-        $cities = collect();
-        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
-            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
-                $cities = \App\Models\City::orderBy('city_name')->get();
-            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
-                $cityIds = $accessService->getDirectorCityIds($user);
-                if (!empty($cityIds)) {
-                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
-                }
-            }
-        }
+        $cities = $user && $accessService->canUseCityFilter($user)
+            ? $accessService->accessibleCitiesForFilter($user)
+            : collect();
 
         $now = Carbon::now();
 

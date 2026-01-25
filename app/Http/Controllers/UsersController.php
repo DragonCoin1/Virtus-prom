@@ -167,17 +167,15 @@ class UsersController extends Controller
             }
         }
 
-        $password = Hash::make($data['password']);
-
         $newUser = User::create([
             'role_id' => $data['role_id'],
             'city_id' => $data['city_id'] ?? null,
             'branch_id' => null, // Убираем привязку к филиалу
             'user_login' => $data['user_login'],
-            'user_password_hash' => $password,
             'user_full_name' => $data['user_full_name'],
             'user_is_active' => $data['user_is_active'] ?? true,
-            'password' => $password,
+            // Canonical password field (hashed cast will hash)
+            'password' => $data['password'],
         ]);
 
         // Для regional_director и branch_director сохраняем несколько городов
@@ -284,9 +282,8 @@ class UsersController extends Controller
         ];
 
         if (!empty($data['password'])) {
-            $password = Hash::make($data['password']);
-            $payload['user_password_hash'] = $password;
-            $payload['password'] = $password;
+            // Canonical password field (hashed cast will hash)
+            $payload['password'] = $data['password'];
         }
 
         $user->update($payload);

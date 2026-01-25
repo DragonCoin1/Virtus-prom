@@ -12,7 +12,7 @@ class PromotersController extends Controller
 {
     public function index(Request $request, AccessService $accessService)
     {
-        $q = Promoter::query();
+        $q = Promoter::query()->with(['branch.city']);
         $user = $request->user();
         if ($user) {
             $accessService->scopePromoters($q, $user);
@@ -64,17 +64,9 @@ class PromotersController extends Controller
         $promoters = $q->paginate(30)->appends($request->query());
 
         // Получаем доступные города для фильтра
-        $cities = collect();
-        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
-            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
-                $cities = \App\Models\City::orderBy('city_name')->get();
-            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
-                $cityIds = $accessService->getDirectorCityIds($user);
-                if (!empty($cityIds)) {
-                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
-                }
-            }
-        }
+        $cities = $user && $accessService->canUseCityFilter($user)
+            ? $accessService->accessibleCitiesForFilter($user)
+            : collect();
 
         return view('promoters.index', compact('promoters', 'cities', 'user'));
     }
@@ -94,7 +86,8 @@ class PromotersController extends Controller
     public function import(Request $request, AccessService $accessService)
     {
         $request->validate([
-            'csv_file' => ['required', 'file'],
+            // max is in kilobytes: 50MB = 51200KB
+            'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:51200'],
         ]);
 
         $this->assertPromoterWriteAccess($accessService);

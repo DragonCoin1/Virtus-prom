@@ -13,7 +13,7 @@ class SalaryController extends Controller
 {
     public function index(Request $request, AccessService $accessService)
     {
-        $promotersQuery = Promoter::orderBy('promoter_full_name');
+        $promotersQuery = Promoter::orderBy('promoter_full_name')->with(['branch.city']);
         $user = $request->user();
         if ($user) {
             $accessService->scopePromoters($promotersQuery, $user);
@@ -152,6 +152,7 @@ class SalaryController extends Controller
             $rows[] = [
                 'promoter_id' => $pid,
                 'promoter_name' => $p ? $p->promoter_full_name : ('ID ' . $pid),
+                'city_name' => $p && $p->branch && $p->branch->city ? $p->branch->city->city_name : '—',
                 'sum_payment' => $sumPay,
                 'sum_adj' => $sumAdj,
                 'sum_final' => $sumFinal,
@@ -175,6 +176,8 @@ class SalaryController extends Controller
         $lastAdjustmentsQuery = SalaryAdjustment::with(['promoter', 'createdBy']);
         if ($hasCityId) {
             $lastAdjustmentsQuery->with('city');
+        } else {
+            $lastAdjustmentsQuery->with('promoter.branch.city');
         }
         
         if ($hasCityId) {
@@ -229,17 +232,9 @@ class SalaryController extends Controller
             ->get();
 
         // Получаем доступные города для фильтра
-        $cities = collect();
-        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user))) {
-            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
-                $cities = \App\Models\City::orderBy('city_name')->get();
-            } elseif ($accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user)) {
-                $cityIds = $accessService->getDirectorCityIds($user);
-                if (!empty($cityIds)) {
-                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
-                }
-            }
-        }
+        $cities = $user && $accessService->canUseCityFilter($user)
+            ? $accessService->accessibleCitiesForFilter($user)
+            : collect();
 
         return view('salary.index', compact(
             'promoters',

@@ -56,11 +56,6 @@
         <div class="container-fluid vp-header-inner">
             <div class="vp-brand-inline">
                 <div class="vp-brand-title">Virtus Prom</div>
-                <div class="vp-brand-sub">
-                    @if(auth()->check())
-                        {{ auth()->user()->user_full_name }} ({{ auth()->user()->user_login }})
-                    @endif
-                </div>
             </div>
 
             <nav class="vp-nav vp-nav-horizontal">
@@ -106,10 +101,30 @@
                 @endif
             </nav>
 
-            <form method="POST" action="{{ route('logout') }}" class="vp-logout">
-                @csrf
-                <button class="btn btn-outline-secondary">Выйти</button>
-            </form>
+            <div class="vp-header-right">
+                @if(auth()->check())
+                    @php
+                        $roleCode = $accessService->roleName(auth()->user());
+                        $roleLabelMap = [
+                            'branch_director' => 'Директор',
+                            'general_director' => 'Генеральный директор',
+                            'manager' => 'Менеджер',
+                            'regional_director' => 'Региональный директор',
+                            'promoter' => 'Промоутер',
+                            'developer' => 'developer',
+                        ];
+                        $roleLabel = $roleLabelMap[$roleCode] ?? ($roleCode ?: '');
+                    @endphp
+                    <div class="vp-account">
+                        {{ auth()->user()->user_full_name }}@if($roleLabel) — {{ $roleLabel }}@endif
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('logout') }}" class="vp-logout">
+                    @csrf
+                    <button class="btn btn-outline-secondary">Выйти</button>
+                </form>
+            </div>
         </div>
     </header>
 
@@ -124,6 +139,36 @@
 @stack('scripts')
 
 <script>
+    // Configure Bootstrap dropdowns globally to avoid clipping/flicker near viewport edges (esp. last rows)
+    const vpInitDropdowns = () => {
+        if (typeof bootstrap === 'undefined' || !bootstrap.Dropdown) return;
+
+        document.querySelectorAll('[data-bs-toggle="dropdown"]').forEach((toggle) => {
+            // If instance already exists, keep it
+            const existing = bootstrap.Dropdown.getInstance(toggle);
+            if (existing) return;
+
+            new bootstrap.Dropdown(toggle, {
+                popperConfig: (defaultConfig) => {
+                    const cfg = defaultConfig || {};
+                    cfg.strategy = 'fixed';
+                    cfg.modifiers = (cfg.modifiers || []).filter((m) => m && m.name !== 'preventOverflow' && m.name !== 'flip');
+                    cfg.modifiers.push(
+                        { name: 'preventOverflow', options: { boundary: 'viewport', padding: 8 } },
+                        { name: 'flip', options: { boundary: 'viewport', padding: 8 } }
+                    );
+                    return cfg;
+                },
+            });
+        });
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', vpInitDropdowns);
+    } else {
+        vpInitDropdowns();
+    }
+
     // Скрипт для поиска по городам и другим полям с datalist
     document.querySelectorAll('[data-searchable-select]').forEach((input) => {
         const targetId = input.getAttribute('data-hidden-target');
@@ -149,6 +194,56 @@
         });
 
         input.addEventListener('change', syncHidden);
+    });
+
+    // Dropdown (⋮ actions) anti-clipping: add a class to ancestors while menu is open
+    // This is a fallback for browsers without :has() support and for overflow:auto containers.
+    // Before opening a dropdown, force-close any other open dropdowns (prevents stacking/hover flicker)
+    document.addEventListener('show.bs.dropdown', (e) => {
+        const nextToggle = e.target;
+        const nextRoot = nextToggle?.closest('.dropdown') || null;
+
+        document.querySelectorAll('.dropdown-menu.show').forEach((menu) => {
+            const root = menu.closest('.dropdown');
+            if (!root) return;
+            if (nextRoot && root === nextRoot) return;
+
+            const toggle = root.querySelector('[data-bs-toggle="dropdown"]');
+            if (!toggle) return;
+
+            const inst = bootstrap.Dropdown.getInstance(toggle) || new bootstrap.Dropdown(toggle);
+            inst.hide();
+        });
+
+        // Clear any leftover helper classes from previous menus
+        document.querySelectorAll('.vp-dropdown-open').forEach((el) => el.classList.remove('vp-dropdown-open'));
+        document.querySelectorAll('.vp-dropdown-open-row').forEach((el) => el.classList.remove('vp-dropdown-open-row'));
+        document.body.classList.remove('vp-dropdown-open');
+    });
+
+    document.addEventListener('shown.bs.dropdown', (e) => {
+        const toggle = e.target;
+        if (!toggle) return;
+        const dropdownRoot = toggle.closest('.dropdown') || toggle.parentElement;
+        if (!dropdownRoot) return;
+        let parent = dropdownRoot;
+        while (parent && parent !== document.body) {
+            parent.classList.add('vp-dropdown-open');
+            parent = parent.parentElement;
+        }
+
+        // Mark table row to guarantee correct stacking order
+        const tr = dropdownRoot.closest('tr');
+        if (tr) tr.classList.add('vp-dropdown-open-row');
+
+        // Also mark body so global CSS can disable hover transforms
+        document.body.classList.add('vp-dropdown-open');
+    });
+
+    document.addEventListener('hidden.bs.dropdown', () => {
+        document.querySelectorAll('.vp-dropdown-open').forEach((el) => el.classList.remove('vp-dropdown-open'));
+        document.querySelectorAll('.vp-dropdown-open-row').forEach((el) => el.classList.remove('vp-dropdown-open-row'));
+        document.body.classList.remove('vp-dropdown-open');
     });
 
     // City autocomplete
@@ -181,15 +276,15 @@
             if (!isDropdownOpen) return;
             
             const rect = input.getBoundingClientRect();
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
             
             // Позиционируем сразу под input, без отступа
             // Используем rect.bottom для точного позиционирования
-            const topPosition = rect.bottom + scrollTop;
+            // IMPORTANT: dropdown is position:fixed, so rect.* is already viewport-based.
+            // Adding scroll offsets makes the dropdown drift and can overlap the input.
+            const topPosition = rect.bottom + 4; // small gap so dropdown never touches/overlaps the input border
             dropdown.style.position = 'fixed';
             dropdown.style.top = topPosition + 'px';
-            dropdown.style.left = (rect.left + scrollLeft) + 'px';
+            dropdown.style.left = rect.left + 'px';
             dropdown.style.width = Math.max(rect.width, 200) + 'px';
             dropdown.style.marginTop = '0';
             dropdown.style.paddingTop = '0';
@@ -288,15 +383,20 @@
         
         const showDropdown = () => {
             isDropdownOpen = true;
-            dropdown.classList.add('show');
-            updateDropdownPosition();
             
-            // Добавляем класс родительским элементам для правильного overflow
-            let parent = container;
-            while (parent && parent !== document.body) {
-                parent.classList.add('vp-autocomplete-open');
-                parent = parent.parentElement;
+            // Portal approach: move dropdown to body to escape any parent transforms/overflow
+            // This guarantees position:fixed works correctly regardless of DOM structure
+            if (dropdown.parentElement !== document.body) {
+                dropdown.dataset.originalParent = container.outerHTML.substring(0, 50); // just for reference
+                document.body.appendChild(dropdown);
             }
+            
+            // Mark body so CSS can disable ALL card transforms on the page (prevents position:fixed issues)
+            document.body.classList.add('vp-autocomplete-open');
+
+            // Position and show immediately (no need to wait, dropdown is already in body)
+            updateDropdownPosition();
+            dropdown.classList.add('show');
         };
         
         const closeDropdown = () => {
@@ -305,10 +405,20 @@
                 dropdown.classList.remove('show');
                 highlightedIndex = -1;
                 
+                // Return dropdown to original container (portal cleanup)
+                if (dropdown.parentElement === document.body && container.parentElement) {
+                    container.appendChild(dropdown);
+                }
+                
                 // Убираем класс с родительских элементов
                 document.querySelectorAll('.vp-autocomplete-open').forEach(el => {
                     el.classList.remove('vp-autocomplete-open');
                 });
+                
+                // Remove body class only if no other autocomplete is open
+                if (!document.querySelector('.vp-city-autocomplete-dropdown.show')) {
+                    document.body.classList.remove('vp-autocomplete-open');
+                }
             }
         };
 

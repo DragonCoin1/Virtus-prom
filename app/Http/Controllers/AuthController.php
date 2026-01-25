@@ -21,54 +21,22 @@ class AuthController extends Controller
             'password'   => ['required', 'string'],
         ]);
 
-        $user = DB::table('users')
+        $eloquentUser = \App\Models\User::query()
             ->where('user_login', $request->input('user_login'))
             ->first();
-
-        if (!$user) {
-            return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
-        }
-
-        $password = $request->input('password');
-        $passwordHash = $user->user_password_hash ?? null;
-        if (!$passwordHash && isset($user->password)) {
-            $passwordHash = $user->password;
-        }
-
-        $isValid = false;
-        $needsRehash = false;
-        if ($passwordHash) {
-            if (Hash::check($password, $passwordHash)) {
-                $isValid = true;
-                $needsRehash = Hash::needsRehash($passwordHash);
-            } elseif (hash_equals($passwordHash, $password)) {
-                $isValid = true;
-                $needsRehash = true;
-            }
-        }
-
-        if (!$isValid) {
-            return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
-        }
-
-        // Получаем ID пользователя - primary key всегда 'id' в Laravel
-        $userId = $user->id ?? null;
-        if (!$userId) {
-            return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
-        }
-
-        $eloquentUser = \App\Models\User::find($userId);
 
         if (!$eloquentUser || (int)$eloquentUser->user_is_active !== 1) {
             return back()->withErrors(['user_login' => 'Аккаунт отключён']);
         }
 
-        if ($needsRehash) {
-            $newHash = Hash::make($password);
-            $eloquentUser->user_password_hash = $newHash;
-            if (property_exists($eloquentUser, 'password') || array_key_exists('password', $eloquentUser->getAttributes())) {
-                $eloquentUser->password = $newHash;
-            }
+        $password = $request->input('password');
+        if (!Hash::check($password, (string) $eloquentUser->password)) {
+            return back()->withErrors(['user_login' => 'Неверный логин или пароль']);
+        }
+
+        // If hashing params changed, rehash stored password (canonical field: password)
+        if (Hash::needsRehash((string) $eloquentUser->password)) {
+            $eloquentUser->password = $password; // hashed cast will rehash
         }
 
         Auth::login($eloquentUser);

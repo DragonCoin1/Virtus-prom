@@ -114,6 +114,7 @@
             <tr>
                 <th style="width: 120px;">Дата</th>
                 <th style="width: 100px;">Время</th>
+                <th>Город</th>
                 <th>Кандидат</th>
                 <th style="width: 160px;">Телефон</th>
                 <th style="width: 160px;">Источник</th>
@@ -141,6 +142,7 @@
                 <tr>
                     <td>{{ $i->interview_date }}</td>
                     <td class="text-muted">{{ $i->interview_time ? substr($i->interview_time, 0, 5) : '—' }}</td>
+                    <td>{{ $i->city?->city_name ?? '—' }}</td>
                     <td class="fw-semibold">{{ $i->candidate_name }}</td>
                     <td>{{ $i->candidate_phone ?? '—' }}</td>
                     <td>{{ $i->source ?? '—' }}</td>

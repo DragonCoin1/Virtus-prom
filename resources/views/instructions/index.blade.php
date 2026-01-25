@@ -3,7 +3,6 @@
 @section('title', 'Инструкции')
 
 @section('content')
-<div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h1 class="h4 mb-0">Инструкции</h1>
@@ -75,5 +74,4 @@
     </div>
 
     {{ $instructions->links() }}
-</div>
 @endsection

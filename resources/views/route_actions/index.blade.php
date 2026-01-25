@@ -123,6 +123,7 @@
                 <th>Дата</th>
                 <th>Промоутер</th>
                 <th>Маршрут</th>
+                <th>Город</th>
                 <th>Макеты</th>
                 <th>Листовки<br><span class="text-muted" style="font-size: 12px;">сделано / выдано</span></th>
                 <th>Расклейка<br><span class="text-muted" style="font-size: 12px;">сделано / выдано</span></th>
@@ -142,6 +143,7 @@
                     <td>{{ $a->action_date }}</td>
                     <td>{{ $a->promoter?->promoter_full_name ?? ('ID ' . $a->promoter_id) }}</td>
                     <td>{{ $a->route?->route_code ?? ('ID ' . $a->route_id) }}</td>
+                    <td>{{ $a->route?->city?->city_name ?? $a->promoter?->branch?->city?->city_name ?? '—' }}</td>
                     <td>{{ $templatesText($a->templates) }}</td>
                     <td>
                         <div class="fw-semibold">{{ $a->leaflets_total }}</div>

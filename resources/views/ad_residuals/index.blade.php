@@ -3,7 +3,6 @@
 @section('title', 'Остатки рекламы')
 
 @section('content')
-<div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4">Остатки рекламы</h1>
         @php
@@ -34,7 +33,7 @@
             $showCityFilter = $accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user) || $accessService->isBranchDirector($user);
         }
     @endphp
-    <form class="row g-2 mb-3" method="GET" action="{{ route('ad_residuals.index') }}">
+    <form class="row g-2 align-items-end mb-3" method="GET" action="{{ route('ad_residuals.index') }}">
         @if($showCityFilter && ($cities ?? collect())->isNotEmpty())
             @php
                 $selectedCity = $cities->firstWhere('city_id', request('city_id'));
@@ -43,7 +42,7 @@
                 <label class="form-label">Город</label>
                 <div class="vp-city-autocomplete">
                     <input type="text" 
-                           class="form-control vp-city-input" 
+                           class="form-control form-control-sm vp-city-input" 
                            placeholder="Город" 
                            value="{{ $selectedCity?->city_name ?? '' }}"
                            autocomplete="off"
@@ -54,16 +53,27 @@
             </div>
         @endif
         <div class="col-md-2">
-            <input class="form-control" name="ad_type" placeholder="Тип рекламы" value="{{ request('ad_type') }}">
+            <label class="form-label">Тип рекламы</label>
+            <select class="form-select form-select-sm" name="ad_type">
+                <option value="">Все</option>
+                <option value="листовки" @selected(request('ad_type') === 'листовки')>Листовки</option>
+                <option value="визитки" @selected(request('ad_type') === 'визитки')>Визитки</option>
+                <option value="расклейка" @selected(request('ad_type') === 'расклейка')>Расклейка</option>
+            </select>
         </div>
         <div class="col-md-2">
-            <input class="form-control" type="date" name="received_from" value="{{ request('received_from') }}">
+            <label class="form-label">Дата с</label>
+            <input class="form-control form-control-sm" type="date" name="received_from" value="{{ request('received_from') }}">
         </div>
         <div class="col-md-2">
-            <input class="form-control" type="date" name="received_to" value="{{ request('received_to') }}">
+            <label class="form-label">Дата по</label>
+            <input class="form-control form-control-sm" type="date" name="received_to" value="{{ request('received_to') }}">
         </div>
         <div class="col-md-2">
-            <button class="btn btn-outline-secondary">Фильтр</button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary flex-fill">Фильтр</button>
+                <a class="btn btn-sm btn-outline-secondary flex-fill" href="{{ route('ad_residuals.index') }}">Сброс</a>
+            </div>
         </div>
     </form>
 
@@ -120,5 +130,4 @@
     </div>
 
     {{ $residuals->links() }}
-</div>
 @endsection

@@ -3,7 +3,6 @@
 @section('title', 'Редактировать пользователя')
 
 @section('content')
-<div class="container">
     <h1 class="h4 mb-3">Редактировать пользователя</h1>
 
     @if(session('ok'))
@@ -117,8 +116,6 @@
             <a class="btn btn-outline-secondary" href="{{ route('users.index') }}">Назад</a>
         </div>
     </form>
-</div>
-
 @push('scripts')
 <script>
     // Управление выбором нескольких городов для regional_director

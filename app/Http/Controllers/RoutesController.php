@@ -131,17 +131,8 @@ class RoutesController extends Controller
         }
 
         // Получаем доступные города для фильтра
-        $cities = collect();
-        if ($user && ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user) || $accessService->isRegionalDirector($user))) {
-            if ($accessService->isDeveloper($user) || $accessService->isGeneralDirector($user)) {
-                $cities = \App\Models\City::orderBy('city_name')->get();
-            } elseif ($accessService->isRegionalDirector($user)) {
-                $cityIds = $accessService->getRegionalDirectorCityIds($user);
-                if (!empty($cityIds)) {
-                    $cities = \App\Models\City::whereIn('city_id', $cityIds)->orderBy('city_name')->get();
-                }
-            }
-        }
+        // (Import form is available for developer/general/regional; helper returns the correct subset.)
+        $cities = $accessService->accessibleCitiesForFilter($user);
 
         return view('routes.import', compact('cities', 'user'));
     }
@@ -154,7 +145,8 @@ class RoutesController extends Controller
         }
 
         $validationRules = [
-            'file' => ['required', 'file', 'mimes:csv,json,txt'],
+            // max is in kilobytes: 50MB = 51200KB
+            'file' => ['required', 'file', 'mimes:csv,json,txt', 'max:51200'],
             'file_type' => ['required', 'in:csv,json'],
         ];
 

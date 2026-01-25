@@ -7,6 +7,7 @@ use App\Models\City;
 use App\Models\Promoter;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class AccessService
@@ -121,6 +122,37 @@ class AccessService
             || $this->isGeneralDirector($user)
             || $this->isRegionalDirector($user)
             || $this->isBranchDirector($user);
+    }
+
+    /**
+     * UI helper: whether current user can use city filters in modules.
+     */
+    public function canUseCityFilter(User $user): bool
+    {
+        return $this->isDeveloper($user)
+            || $this->isGeneralDirector($user)
+            || $this->isRegionalDirector($user)
+            || $this->isBranchDirector($user);
+    }
+
+    /**
+     * UI helper: cities available for filters (developer/general: all; regional/branch director: own cities).
+     */
+    public function accessibleCitiesForFilter(User $user): Collection
+    {
+        if ($this->isDeveloper($user) || $this->isGeneralDirector($user)) {
+            return City::query()->orderBy('city_name')->get();
+        }
+
+        if ($this->isRegionalDirector($user) || $this->isBranchDirector($user)) {
+            $cityIds = $this->getDirectorCityIds($user);
+            if (empty($cityIds)) {
+                return collect();
+            }
+            return City::query()->whereIn('city_id', $cityIds)->orderBy('city_name')->get();
+        }
+
+        return collect();
     }
 
     public function canManageInstructions(User $user): bool

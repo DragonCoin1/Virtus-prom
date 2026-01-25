@@ -97,9 +97,13 @@
             <tr>
                 <th>
                     <a class="text-decoration-none text-reset" href="{{ $sortUrl }}">
-                        ФИО {!! $sortIcon ? '<span class="ms-1 text-muted">' . $sortIcon . '</span>' : '' !!}
+                        ФИО
+                        @if($sortIcon)
+                            <span class="ms-1 text-muted">{{ $sortIcon }}</span>
+                        @endif
                     </a>
                 </th>
+                <th>Город</th>
                 <th>Телефон</th>
                 <th>Реквизиты</th>
                 <th>Статус</th>
@@ -113,6 +117,7 @@
             @foreach($promoters as $p)
                 <tr>
                     <td>{{ $p->promoter_full_name }}</td>
+                    <td>{{ $p->branch?->city?->city_name ?? '—' }}</td>
                     <td>{{ $p->promoter_phone }}</td>
                     <td>{{ $p->promoter_requisites ?? '—' }}</td>
                     <td>
@@ -160,7 +165,7 @@
             @endforeach
 
             @if($promoters->count() === 0)
-                <tr><td colspan="8" class="text-center text-muted p-4">Пока нет промоутеров</td></tr>
+                <tr><td colspan="9" class="text-center text-muted p-4">Пока нет промоутеров</td></tr>
             @endif
             </tbody>
         </table>

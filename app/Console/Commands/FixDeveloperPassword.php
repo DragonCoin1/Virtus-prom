@@ -24,11 +24,10 @@ class FixDeveloperPassword extends Command
         $user = User::where('user_login', 'developer')->first();
         
         $password = 'developer12345';
-        $passwordHash = Hash::make($password);
 
         if ($user) {
-            $user->user_password_hash = $passwordHash;
-            $user->password = $passwordHash;
+            // Canonical password field (hashed cast will hash)
+            $user->password = $password;
             $user->user_is_active = 1;
             $user->role_id = $roleId;
             $user->save();
@@ -38,8 +37,8 @@ class FixDeveloperPassword extends Command
                 'user_login' => 'developer',
                 'user_full_name' => 'Developer Admin',
                 'role_id' => $roleId,
-                'user_password_hash' => $passwordHash,
-                'password' => $passwordHash,
+                // Canonical password field (hashed cast will hash)
+                'password' => $password,
                 'user_is_active' => 1,
             ]);
             $this->info('Пользователь developer создан');

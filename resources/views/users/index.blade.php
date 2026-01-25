@@ -3,7 +3,6 @@
 @section('title', 'Пользователи')
 
 @section('content')
-<div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h1 class="h4">Пользователи</h1>
         @if(isset($canManageUsers) && $canManageUsers)
@@ -90,5 +89,4 @@
     </div>
 
     {{ $users->links() }}
-</div>
 @endsection

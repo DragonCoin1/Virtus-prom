@@ -22,11 +22,8 @@ class User extends Authenticatable
         'city_id',
         'branch_id',
         'user_login',
-        'user_password_hash',
         'user_full_name',
         'user_is_active',
-        'name',
-        'email',
         'password',
     ];
 
@@ -37,17 +34,12 @@ class User extends Authenticatable
      */
     protected $hidden = [
         'password',
-        'user_password_hash',
         'remember_token',
     ];
 
     protected static function booted(): void
     {
-        static::creating(function (self $user): void {
-            if (empty($user->user_password_hash) && !empty($user->password)) {
-                $user->user_password_hash = $user->password;
-            }
-        });
+        // no-op
     }
 
     /**
